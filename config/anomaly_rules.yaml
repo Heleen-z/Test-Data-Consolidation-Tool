@@ -1,0 +1,49 @@
+# Anomaly detection rules (MVP Layer-1 engineering rules + Layer-2 data quality)
+# All thresholds can be overridden per test type / field.
+
+limits:
+  # default: no hard limits; FAKT files carry inline *_min/*_max columns and are
+  # used automatically when present.
+  default: {}
+  # examples (edit freely):
+  # T12:
+  #   R_EC.SPEED: {min: 0, max: 6000}
+  #   TCK_05: {min: -50, max: 1100}
+
+jump:
+  # jump (spike) detection: |value[i] - value[i-1]| > max(abs_factor * median_abs_step, abs_min)
+  enabled: true
+  abs_factor: 10.0
+  abs_min: null          # per-field absolute minimum step to flag, e.g. 50.0
+  apply_to: colored_only # colored_only | all_numeric
+
+temperature:
+  # high-priority temperature anomaly rules
+  enabled: true
+  # local jump: compare with adjacent points; >=10% is flagged
+  jump_pct: 0.10
+  # stable -> drift: baseline from first N finite points
+  stable_window_points: 30
+  stable_band_pct: 0.03      # stable band (e.g. 657 +/-3%)
+  drift_min_points: 20        # sustained one-side drift points
+  drift_delta_pct: 0.05       # median drift vs baseline
+  monotonic_ratio: 0.70       # ratio of aligned step directions within drift segment
+  # temperature channel heuristics
+  name_keywords: [temp, temperature, tck, egt, exhaust]
+  unit_keywords: [C, degC, "°C", "℃", K]
+
+data_quality:
+  time_gap:
+    enabled: true
+    gap_factor: 5.0      # gap > factor * median sampling interval
+    max_gaps_reported: 500
+  constant_value:
+    enabled: true
+    min_seconds: 300     # constant stretch longer than this is suspicious
+    min_points: 30
+    ignore_values: [0]   # constant zero often means channel off -> still report as warning
+  duplicates:
+    enabled: true
+  missing:
+    enabled: true
+    colored_nan_warn_ratio: 0.05   # >5% NaN in a colored column -> warning

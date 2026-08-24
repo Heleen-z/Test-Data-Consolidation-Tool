@@ -1,0 +1,59 @@
+defaults:
+  input_folder: ''
+  output_folder: ''
+  template_folder: ''
+  default_template_library: C:\Users\pei\OneDrive - FORVIA\AI\FCM China Engineering
+    AI Projects\Testing raw data consonlidation\Raw data standard Title
+contact:
+  owner: Data Tool Support
+  email: jing.pei@Forvia.com
+  phone: +86-1522-173-4487
+  note: 如程序报错，请截图并附上 Processing Log.txt 联系支持人员。
+ui:
+  brand_title: Testing Raw Data Consolidation
+  accent_color: '#0A5E8E'
+  highlight_color: '#E7F2F8'
+  page_size: 200
+lifecycle:
+  auto_shutdown_on_idle: true
+  idle_shutdown_seconds: 30
+  idle_shutdown_poll_seconds: 2
+  heartbeat_seconds: 3
+  idle_shutdown_startup_grace_seconds: 120
+  idle_shutdown_min_heartbeats: 3
+template_folder_candidates:
+- Raw data standard Title
+scan:
+  max_file_mb: 2048
+  hash_chunk_kb: 1024
+  duplicate_hash_head_mb: 4
+merge:
+  chunk_rows: 200000
+  keep_source_row: true
+export:
+  merged_name: Merged Dataset.xlsx
+  anomaly_name: Anomaly Report.xlsx
+  validation_name: Validation Report.xlsx
+  log_name: Processing Log.txt
+  max_excel_rows: 1000000
+  seconds_per_cell: 5.0e-06
+  progress_chunk_rows: 20000
+  chart_max_points: 20000
+  chart_sheet_prefix: Trend_
+temperature:
+  name_contains:
+  - temp
+  - temperature
+  - tck
+  - ts
+  name_equals:
+  - ts
+  units:
+  - c
+  - degc
+  - celsius
+  - f
+  - degf
+  - k
+  - kelvin
+  group_prefix_min_columns: 5

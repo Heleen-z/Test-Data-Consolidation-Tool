@@ -1,0 +1,103 @@
+# Test type recognition rules (configuration-driven, no hardcoding in code)
+# Each type:
+#   path_keywords : matched against folder path + file name (lowercase, substring)
+#   extensions    : candidate file extensions
+#   fingerprints  : structural checks: first_line_prefix / contains / sheet_keyword / sibling_ext
+#   parser        : parser id used to decode files of this type (by extension mapping)
+
+test_types:
+  FAKT:
+    path_keywords: [fakt, lti-498]
+    extensions: [.txt]
+    fingerprints:
+      - kind: first_line_contains
+        value: "Timestamp [ms];Runtime"
+    group: Burner
+    time_basis: relative_ms
+
+  GANTER:
+    path_keywords: [ganter]
+    extensions: [.csv]
+    fingerprints:
+      - kind: first_line_contains
+        value: "TCK01"
+    group: Burner
+    time_basis: absolute
+
+  SEOUL:
+    path_keywords: [seoul]
+    extensions: [.csv]
+    fingerprints:
+      - kind: line_contains
+        line: 1
+        value: "T Burner"
+    group: Burner
+    time_basis: absolute
+
+  T09:
+    path_keywords: [t09, diesel burner, dfl]
+    extensions: [.xlsx, .tdms, .tdms_index]
+    fingerprints:
+      - kind: sibling_ext
+        value: .tdms
+      - kind: magic
+        value: "TDMSm"
+    group: Burner
+    time_basis: cycles
+
+  T12:
+    path_keywords: [t12]
+    extensions: [.a01, .a02, .a03, .a04, .a05, .a06, .a07, .a08, .a09, .files, .mlog, .xpar]
+    fingerprints:
+      - kind: first_line_prefix
+        value: "BENCH4"
+      - kind: sibling_ext
+        value: .files
+    group: Engine bench
+    time_basis: absolute
+
+  T13:
+    path_keywords: [t13]
+    extensions: [.txt]
+    fingerprints:
+      - kind: first_line_prefix
+        value: "MNTPFILE"
+    group: Engine bench
+    time_basis: absolute
+
+  MP_SHAKER:
+    path_keywords: [m+p, shake, shaker, hvt]
+    extensions: [.xlsx, .csv, .tsr, .rsr, .sot, .bin]
+    fingerprints:
+      - kind: sibling_ext
+        value: .tsr
+      - kind: magic
+        value: "005+"
+    group: HVT
+    time_basis: relative_s
+
+  OTHERS:
+    path_keywords: []
+    extensions: []
+    fingerprints: []
+    group: Others
+    time_basis: unknown
+
+# Template file matching keywords (template file name -> test type)
+template_keywords:
+  FAKT: [fakt]
+  GANTER: [ganter]
+  SEOUL: [seoul]
+  T09: [t09]
+  T12: [t12]
+  T13: [t13]
+  MP_SHAKER: [m+p, shaker]
+
+# Files inside the input folder whose names match these patterns are treated as
+# stray template copies and excluded from merging (warning only).
+template_like_patterns: [表头, template, header]
+
+# Time field name hints (lowercase substring match)
+time_field_hints: [timestamp, date, time, x-data]
+# Cycle/counter field hints
+cycle_field_hints: [cycle, cycles]
