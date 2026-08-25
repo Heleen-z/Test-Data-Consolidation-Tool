@@ -35,3 +35,19 @@ python run_tool.py
 python -m pytest -q
 ```
 
+## 公司电脑生成发布版 EXE
+
+GitHub 不直接保存打包后的 EXE，因为单文件产物通常超过 GitHub 普通文件 100 MB 限制。公司电脑拉下源码后，在项目根目录运行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\build_release.ps1
+```
+
+脚本会自动创建构建环境、安装依赖、运行测试并生成：
+
+```text
+dist\Testing Data Consolidation Tool.exe
+```
+
+构建完成后，`dist\release-info.txt` 会记录构建时间、Git 提交号、EXE 大小和 SHA256。

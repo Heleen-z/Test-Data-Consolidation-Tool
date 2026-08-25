@@ -1,8 +1,11 @@
+[CmdletBinding()]
+param(
+    [switch]$SkipTests,
+    [switch]$KeepBuildCache
+)
+
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-Set-Location -LiteralPath $ProjectRoot
-python -m pip install -r requirements-dev.txt
-python -m pytest -q
-python -m PyInstaller --noconfirm --clean TestingDataTool.spec
-Write-Host "Build complete: $ProjectRoot\dist\Testing Data Consolidation Tool.exe"
+$ReleaseScript = Join-Path $ProjectRoot "build_release.ps1"
 
+& $ReleaseScript -SkipTests:$SkipTests -KeepBuildCache:$KeepBuildCache

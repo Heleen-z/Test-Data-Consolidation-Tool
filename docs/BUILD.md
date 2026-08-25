@@ -22,7 +22,58 @@ python -m pytest -q
 python run_tool.py
 ```
 
-## 构建单文件 EXE
+## 公司电脑一键构建发布 EXE
+
+从 GitHub 拉下源码后，在项目根目录打开 PowerShell，执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\build_release.ps1
+```
+
+脚本会自动完成：
+
+- 检查本机 Python 版本，要求 3.11、3.12 或 3.13；
+- 创建独立构建虚拟环境 `.venv-build`；
+- 安装运行、测试和 PyInstaller 打包依赖；
+- 执行自动测试；
+- 清理旧构建产物；
+- 生成 Windows 单文件 EXE；
+- 输出 EXE 路径、文件大小和 SHA256 校验值。
+
+结果位于：
+
+```text
+dist\Testing Data Consolidation Tool.exe
+```
+
+同时会生成：
+
+```text
+dist\release-info.txt
+```
+
+如果只是快速验证打包、不想运行测试，可以执行：
+
+```powershell
+.\build_release.ps1 -SkipTests
+```
+
+如果想保留 PyInstaller 中间缓存，可以执行：
+
+```powershell
+.\build_release.ps1 -KeepBuildCache
+```
+
+旧入口仍然可用：
+
+```powershell
+.\scripts\build.ps1
+```
+
+它会转调用根目录的发布脚本。
+
+## 手动构建单文件 EXE
 
 ```powershell
 .\scripts\build.ps1
@@ -35,4 +86,3 @@ python run_tool.py
 ## 增加新格式
 
 解析器必须实现 `probe`、`inspect` 和 `iter_batches`，注册到 `ParserRegistry`，并在 `config/test_types.yaml` 指定 parser ID、扩展名、结构指纹、横轴类型和候选字段。专用格式必须使用脱敏真实样本及人工确认结果建立 golden test，不能仅按扩展名宣称支持。
-
