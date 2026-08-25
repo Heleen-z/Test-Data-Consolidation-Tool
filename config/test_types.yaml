@@ -14,6 +14,9 @@ test_types:
         value: "Timestamp [ms];Runtime"
     group: Burner
     time_basis: relative_ms
+    parser: delimited
+    axis_candidates: ["Runtime [ms]", "Timestamp [ms]", runtime, timestamp]
+    axis_output: ["Runtime [ms]"]
 
   GANTER:
     path_keywords: [ganter]
@@ -23,6 +26,9 @@ test_types:
         value: "TCK01"
     group: Burner
     time_basis: absolute
+    parser: delimited
+    axis_candidates: [date, time, datetime, timestamp]
+    axis_output: [Date, Time]
 
   SEOUL:
     path_keywords: [seoul]
@@ -33,6 +39,9 @@ test_types:
         value: "T Burner"
     group: Burner
     time_basis: absolute
+    parser: delimited
+    axis_candidates: [date, time, datetime, timestamp]
+    axis_output: [Date, Time]
 
   T09:
     path_keywords: [t09, diesel burner, dfl]
@@ -44,6 +53,9 @@ test_types:
         value: "TDMSm"
     group: Burner
     time_basis: cycles
+    parser: tabular
+    axis_candidates: [cycles, cycle, "cycle number"]
+    axis_output: [Cycles]
 
   T12:
     path_keywords: [t12]
@@ -55,6 +67,9 @@ test_types:
         value: .files
     group: Engine bench
     time_basis: absolute
+    parser: proprietary_t12
+    axis_candidates: [date, time, datetime, timestamp]
+    axis_output: [Date, Time]
 
   T13:
     path_keywords: [t13]
@@ -64,6 +79,9 @@ test_types:
         value: "MNTPFILE"
     group: Engine bench
     time_basis: absolute
+    parser: delimited
+    axis_candidates: [date, time, datetime, timestamp]
+    axis_output: [Date, Time]
 
   MP_SHAKER:
     path_keywords: [m+p, shake, shaker, hvt]
@@ -75,6 +93,9 @@ test_types:
         value: "005+"
     group: HVT
     time_basis: relative_s
+    parser: tabular
+    axis_candidates: ["X-Data [s]", x-data, time, frequency]
+    axis_output: ["X-Data [s]"]
 
   OTHERS:
     path_keywords: []
@@ -82,6 +103,9 @@ test_types:
     fingerprints: []
     group: Others
     time_basis: unknown
+    parser: unsupported
+    axis_candidates: []
+    axis_output: []
 
 # Template file matching keywords (template file name -> test type)
 template_keywords:

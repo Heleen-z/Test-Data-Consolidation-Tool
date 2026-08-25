@@ -2,3 +2,11 @@
 __pycache__/
 build/
 dist/
+.pytest_cache/
+.coverage
+*.egg-info/
+*.py[cod]
+.venv/
+.testdata_tool/
+output/
+*.parquet

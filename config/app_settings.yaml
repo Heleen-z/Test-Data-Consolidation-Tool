@@ -2,8 +2,7 @@ defaults:
   input_folder: ''
   output_folder: ''
   template_folder: ''
-  default_template_library: C:\Users\pei\OneDrive - FORVIA\AI\FCM China Engineering
-    AI Projects\Testing raw data consonlidation\Raw data standard Title
+  default_template_library: ''
 contact:
   owner: Data Tool Support
   email: jing.pei@Forvia.com
@@ -40,6 +39,14 @@ export:
   progress_chunk_rows: 20000
   chart_max_points: 20000
   chart_sheet_prefix: Trend_
+  visible_excel_rows: 1048575
+templates:
+  selected_fill_rgb:
+  - FFFFFF00
+  - FF00B050
+  max_header_scan_rows: 20
+matching:
+  aliases: {}
 temperature:
   name_contains:
   - temp

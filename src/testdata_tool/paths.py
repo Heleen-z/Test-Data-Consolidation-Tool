@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+from .config import AppConfig
+from .preferences import load_preferences
+
+
+def executable_folder() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path.cwd()
+
+
+def default_template_folder(config: AppConfig) -> Path:
+    preferences = load_preferences()
+    candidates = [
+        preferences.get("template_folder", ""),
+        str(executable_folder() / "Raw data standard Title"),
+        str(config.root / "Raw data standard Title"),
+    ]
+    configured = config.app.get("defaults", {}).get("default_template_library", "")
+    if configured:
+        candidates.insert(1, configured)
+    for value in candidates:
+        if value and Path(value).is_dir():
+            return Path(value)
+    return executable_folder() / "Raw data standard Title"
+

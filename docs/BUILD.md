@@ -1,0 +1,38 @@
+# 开发、测试与 Windows 打包
+
+## 环境
+
+- Windows 10/11 64 位；
+- Python 3.11–3.13；
+- 建议在全新虚拟环境构建，避免把无关包收进 EXE。
+
+## 安装与测试
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+## 本地启动
+
+```powershell
+python run_tool.py
+```
+
+## 构建单文件 EXE
+
+```powershell
+.\scripts\build.ps1
+```
+
+结果位于 `dist\Testing Data Consolidation Tool.exe`。配置、网页入口和标准模板被打包进单文件；如果 EXE 同目录存在 `Raw data standard Title`，程序优先使用外部模板，方便业务人员更新模板而不重新打包。
+
+正式发布前，应在没有安装 Python 的干净 Windows 虚拟机上完成：首次启动、中文路径、Pre-check、混合类型合并、图表、下载、浏览器关闭后的空闲退出等验收。
+
+## 增加新格式
+
+解析器必须实现 `probe`、`inspect` 和 `iter_batches`，注册到 `ParserRegistry`，并在 `config/test_types.yaml` 指定 parser ID、扩展名、结构指纹、横轴类型和候选字段。专用格式必须使用脱敏真实样本及人工确认结果建立 golden test，不能仅按扩展名宣称支持。
+
