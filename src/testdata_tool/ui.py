@@ -26,6 +26,39 @@ st.markdown(
 )
 
 
+def _select_folder(widget_key: str, title: str) -> None:
+    """Open a native Windows folder picker and put the result in a path widget."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected = filedialog.askdirectory(title=title, mustexist=True)
+        root.destroy()
+        if selected:
+            st.session_state[widget_key] = selected
+    except Exception as exc:
+        st.warning(f"无法打开系统文件夹选择器，请手动输入路径：{exc}")
+
+
+def _path_picker(label: str, key: str, default: str, title: str):
+    """Render a path text box with a native Browse button beside it."""
+    if key not in st.session_state:
+        st.session_state[key] = default
+    field, button = st.columns([5, 1])
+    field.text_input(label, key=key)
+    button.button(
+        "浏览…",
+        key=f"browse_{key}",
+        use_container_width=True,
+        on_click=_select_folder,
+        args=(key, title),
+    )
+    return st.session_state[key]
+
+
 def _load_configuration():
     try:
         return load_config()
@@ -172,9 +205,27 @@ def main():
         saved_template = str(default_template)
     st.subheader("1. 路径设置")
     col1, col2, col3 = st.columns(3)
-    input_value = col1.text_input("原始数据输入目录", saved_input)
-    output_value = col2.text_input("合并结果输出目录", saved_output)
-    template_value = col3.text_input("表头模板目录", saved_template)
+    with col1:
+        input_value = _path_picker(
+            "原始数据输入目录",
+            "input_folder",
+            saved_input,
+            "选择原始数据输入目录",
+        )
+    with col2:
+        output_value = _path_picker(
+            "合并结果输出目录",
+            "output_folder",
+            saved_output,
+            "选择合并结果输出目录",
+        )
+    with col3:
+        template_value = _path_picker(
+            "表头模板目录",
+            "template_folder",
+            saved_template,
+            "选择表头模板目录",
+        )
 
     st.subheader("2. Pre-check")
     if st.button("开始 Pre-check", type="primary"):
