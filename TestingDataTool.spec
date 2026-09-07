@@ -15,6 +15,7 @@ datas = sorted(streamlit_data + plotly_data + [
     ("config", "config"),
     ("Raw data standard Title", "Raw data standard Title"),
     ("src/testdata_tool/ui.py", "testdata_tool"),
+    ("src/testdata_tool/sharepoint_request.ps1", "testdata_tool"),
 ])
 binaries = sorted(streamlit_bins + plotly_bins)
 hiddenimports = sorted(set(streamlit_hidden + plotly_hidden + collect_submodules("testdata_tool") + [

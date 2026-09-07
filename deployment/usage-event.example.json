@@ -1,0 +1,22 @@
+{
+  "__metadata": {"type": "SP.Data.TestDataConsolidationLogsListItem"},
+  "EventId": "542d1740-69e9-4a6d-b904-d66536c9df16",
+  "Title": "SUCCESS",
+  "Timestamp": "2026-09-05T08:30:00Z",
+  "InputFormat": "csv;txt",
+  "OutputFormat": "XLSX",
+  "RowCount": 25000,
+  "Duration": 12.45,
+  "UserName": "example.user",
+  "UserEmail": "",
+  "ComputerName": "EXAMPLE-PC",
+  "ProjectName": "Example Project",
+  "ProjectCode": "",
+  "ErrorMessage": "1 个文件合并失败；详情见本地验证信息",
+  "FileCount": 3,
+  "FailedFileCount": 1,
+  "TestTypes": "T09;T12",
+  "AppVersion": "1.1.0",
+  "ConfigVersion": "local-test",
+  "TemplateVersion": "built-in"
+}

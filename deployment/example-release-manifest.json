@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "channel": "production",
+  "published_at": "2026-09-01T10:00:00+08:00",
+  "published_by": "administrator",
+  "config": {
+    "version": "2026.09.001",
+    "path": "configs/2026.09.001/operations.yaml",
+    "sha256": "REPLACE_WITH_64_CHARACTER_SHA256"
+  },
+  "templates": {
+    "version": "2026.09.001",
+    "path": "templates/2026.09.001/TemplateBundle.zip",
+    "sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "display_name": "FORVIA Test Data Standard Templates"
+  },
+  "application": {
+    "latest_version": "1.1.0",
+    "minimum_supported_version": "1.1.0",
+    "download_path": "app/1.1.0/Testing Data Consolidation Tool.exe",
+    "release_note": "Central configuration and managed templates"
+  }
+}

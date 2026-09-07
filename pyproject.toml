@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "test-data-consolidation-tool"
-version = "1.0.0"
+version = "1.1.0"
 description = "Local test data pre-check, consolidation and visualization tool"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -32,7 +32,9 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+testdata_tool = ["*.ps1"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-

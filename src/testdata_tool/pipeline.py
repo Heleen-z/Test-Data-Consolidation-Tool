@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from . import __version__
 from .axis import build_axis
 from .config import AppConfig
 from .export import export_workbook
@@ -91,9 +92,17 @@ def merge_prechecked(
     output_folder: Path,
     config: AppConfig,
     progress_callback=None,
+    selected_source_ids: set[str] | None = None,
 ) -> MergeResult:
-    mergeable = [item for item in precheck.files if item.mergeable]
+    mergeable = [
+        item
+        for item in precheck.files
+        if item.mergeable
+        and (selected_source_ids is None or item.source_id in selected_source_ids)
+    ]
     if not mergeable:
+        if selected_source_ids is not None:
+            raise ValueError("没有选择可合并文件，请至少勾选一个有效文件")
         raise ValueError("没有可合并的有效文件，请先完成 Pre-check")
     chunk_rows = int(config.app.get("merge", {}).get("chunk_rows", 200_000))
     registry = ParserRegistry()
@@ -169,6 +178,8 @@ def merge_prechecked(
 
     source_index = pd.DataFrame(source_rows)
     validation = precheck.dataframe()
+    if selected_source_ids is not None:
+        validation["是否选择合并"] = validation["source_id"].isin(selected_source_ids)
     configured_name = config.app.get("export", {}).get("merged_name", "Merged Dataset.xlsx")
     output_path = _unique_output_path(output_folder, configured_name)
     if progress_callback:
@@ -190,11 +201,16 @@ def merge_prechecked(
     log_path = output_folder / log_name
     log_lines = [
         f"Testing Data Consolidation Tool {datetime.now():%Y-%m-%d %H:%M:%S}",
+        f"App version: {__version__}",
+        f"Config version: {config.config_version}",
+        f"Template version: {config.template_version}",
+        f"Config source: {config.config_source}",
         f"Input: {precheck.input_folder}",
         f"Templates: {precheck.template_folder}",
         f"Output: {output_path}",
         f"Scanned: {precheck.scanned_count}",
         f"Mergeable: {precheck.valid_count}",
+        f"Selected for merge: {len(mergeable)}",
         "",
     ]
     for row in source_rows:

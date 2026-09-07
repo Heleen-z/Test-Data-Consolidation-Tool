@@ -14,6 +14,8 @@ def executable_folder() -> Path:
 
 
 def default_template_folder(config: AppConfig) -> Path:
+    if config.managed_template_folder and config.managed_template_folder.is_dir():
+        return config.managed_template_folder
     preferences = load_preferences()
     candidates = [
         preferences.get("template_folder", ""),
@@ -27,4 +29,3 @@ def default_template_folder(config: AppConfig) -> Path:
         if value and Path(value).is_dir():
             return Path(value)
     return executable_folder() / "Raw data standard Title"
-

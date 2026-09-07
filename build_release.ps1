@@ -10,6 +10,8 @@ $VenvDir = Join-Path $ProjectRoot ".venv-build"
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 $ExePath = Join-Path $ProjectRoot "dist\Testing Data Consolidation Tool.exe"
 $InfoPath = Join-Path $ProjectRoot "dist\release-info.txt"
+$LocalConfigTemplate = Join-Path $ProjectRoot "deployment\local-config.yaml.example"
+$LocalConfigPath = Join-Path $ProjectRoot "dist\local-config.yaml"
 
 function Write-Step {
     param([string]$Message)
@@ -123,6 +125,11 @@ Write-Step "Building Windows EXE"
 
 if (-not (Test-Path -LiteralPath $ExePath)) {
     throw "Build finished but EXE was not found at: $ExePath"
+}
+
+if ((Test-Path -LiteralPath $LocalConfigTemplate) -and -not (Test-Path -LiteralPath $LocalConfigPath)) {
+    Copy-Item -LiteralPath $LocalConfigTemplate -Destination $LocalConfigPath
+    Write-Host "Created local test configuration: $LocalConfigPath" -ForegroundColor Yellow
 }
 
 $Hash = (Get-FileHash -LiteralPath $ExePath -Algorithm SHA256).Hash

@@ -1,0 +1,3 @@
+# Optional override placed beside the locally copied EXE.
+# Normally the stable company UNC root is built into config/app_settings.yaml.
+central_root: '\\server\share\TestDataTool\production'

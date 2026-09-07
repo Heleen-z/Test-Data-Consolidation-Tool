@@ -3,6 +3,15 @@ defaults:
   output_folder: ''
   template_folder: ''
   default_template_library: ''
+usage_logging:
+  mode: cache_only
+  site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: Test Data Consolidation Logs
+central_management:
+  # The built EXE uses this stable UNC path. Source runs only use it when explicitly
+  # overridden by TESTDATA_TOOL_CONFIG_ROOT or bootstrap.yaml.
+  central_root: '\\10.162.2.55\shares\Engineering -1890\TC-AFO\DT&AI\Release\Test Data Consolidation Tool'
+  startup_timeout_seconds: 5
 contact:
   owner: Data Tool Support
   email: jing.pei@Forvia.com
@@ -37,7 +46,6 @@ export:
   max_excel_rows: 1000000
   seconds_per_cell: 5.0e-06
   progress_chunk_rows: 20000
-  chart_max_points: 20000
   chart_sheet_prefix: Trend_
   visible_excel_rows: 1048575
 templates:
@@ -53,8 +61,23 @@ temperature:
   - temperature
   - tck
   - ts
+  - thermocouple
+  - egt
+  - exhaust
+  - 温度
   name_equals:
   - ts
+  name_prefixes:
+  - t burner
+  - t gas
+  - tc
+  - egt
+  numeric_prefixes:
+  - t
+  - ts
+  - tck
+  - tc
+  - egt
   units:
   - c
   - degc

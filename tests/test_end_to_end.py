@@ -30,6 +30,14 @@ def test_precheck_and_multi_type_export(sample_workspace):
 
     workbook = load_workbook(result.output_path, read_only=False, data_only=True)
     assert {"Summary", "FAKT", "GANTER", "Source_Index", "Validation"} <= set(workbook.sheetnames)
+    summary = {
+        row[0].value: row[1].value
+        for row in workbook["Summary"].iter_rows(min_row=2, max_col=2)
+        if row[0].value
+    }
+    assert summary["程序版本"] == "1.1.0"
+    assert summary["配置版本"] == "built-in"
+    assert summary["模板版本"] == "built-in"
     sheet = workbook["FAKT"]
     headers = [cell.value for cell in sheet[1]]
     assert "Unused" not in headers
@@ -39,6 +47,26 @@ def test_precheck_and_multi_type_export(sample_workspace):
         if str(cell.value).startswith("__")
     )
     workbook.close()
+
+
+def test_merge_can_include_only_user_selected_valid_files(sample_workspace):
+    input_folder, output_folder, template_folder = sample_workspace
+    config = load_config()
+    precheck = run_precheck(input_folder, template_folder, output_folder, config)
+    chosen = next(item for item in precheck.files if item.path.name == "fakt_a.txt")
+
+    result = merge_prechecked(
+        precheck, output_folder, config, selected_source_ids={chosen.source_id}
+    )
+
+    assert result.type_rows == {"FAKT": 2}
+    assert set(result.source_index["Source_ID"]) == {chosen.source_id}
+    assert result.validation.loc[
+        result.validation["source_id"] == chosen.source_id, "是否选择合并"
+    ].item()
+    assert not result.validation.loc[
+        result.validation["source_id"] != chosen.source_id, "是否选择合并"
+    ].any()
 
 
 def test_exact_duplicate_is_skipped(sample_workspace):

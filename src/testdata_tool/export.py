@@ -47,6 +47,9 @@ def _summary_frames(
     overview = pd.DataFrame(
         [
             ("程序版本", __version__),
+            ("配置版本", config.config_version),
+            ("模板版本", config.template_version),
+            ("配置来源", config.config_source),
             ("处理时间", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
             ("输入目录", str(precheck.input_folder)),
             ("模板目录", str(precheck.template_folder)),
@@ -128,4 +131,3 @@ def export_workbook(
         validation_name = safe_sheet_name("Validation", existing)
         validation.to_excel(writer, sheet_name=validation_name, index=False)
         _format_sheet(writer, validation_name, validation)
-

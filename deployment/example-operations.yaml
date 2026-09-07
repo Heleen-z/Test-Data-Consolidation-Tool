@@ -1,0 +1,26 @@
+schema_version: 1
+
+contact:
+  owner: Data Tool Support
+  email: support@example.com
+  phone: "+86-0000-000-000"
+  note: 如程序报错，请截图并附上 Processing Log.txt 联系支持人员。
+
+defaults:
+  input_folder: ''
+  output_folder: ''
+
+ui:
+  brand_title: Testing Raw Data Consolidation
+  announcement: ''
+  help_text: ''
+
+managed_templates:
+  required: true
+  download_label: 下载当前标准模板包
+  update_message: 正在更新标准模板，请勿关闭程序……
+  success_message: 标准模板已更新至版本 {version}
+
+support_links:
+  user_guide: ''
+  issue_form: ''

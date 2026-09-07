@@ -47,12 +47,23 @@ def _start_idle_monitor(grace_seconds: int = 120, idle_seconds: int = 30) -> Non
     threading.Thread(target=monitor, name="idle-shutdown", daemon=True).start()
 
 
+def _apply_bootstrap_arguments(arguments: list[str]) -> None:
+    for index, argument in enumerate(arguments):
+        if argument.startswith("--config-root="):
+            os.environ["TESTDATA_TOOL_CONFIG_ROOT"] = argument.split("=", 1)[1]
+            return
+        if argument == "--config-root" and index + 1 < len(arguments):
+            os.environ["TESTDATA_TOOL_CONFIG_ROOT"] = arguments[index + 1]
+            return
+
+
 def main() -> None:
     from streamlit.web import cli as streamlit_cli
     from testdata_tool.config import load_config
 
+    _apply_bootstrap_arguments(sys.argv[1:])
     port = _free_port()
-    lifecycle = load_config().app.get("lifecycle", {})
+    lifecycle = load_config(managed=False).app.get("lifecycle", {})
     if lifecycle.get("auto_shutdown_on_idle", True):
         _start_idle_monitor(
             int(lifecycle.get("idle_shutdown_startup_grace_seconds", 120)),

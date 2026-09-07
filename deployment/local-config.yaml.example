@@ -1,0 +1,35 @@
+# Optional local test override. Copy this file beside the EXE as local-config.yaml.
+# When present, it bypasses central configuration and local cache entirely.
+# Remove or rename local-config.yaml to return to normal central configuration.
+schema_version: 1
+usage_logging:
+  mode: cache_only
+  site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: Test Data Consolidation Logs
+
+contact:
+  owner: Local Test Mode
+  email: ''
+  phone: ''
+  note: '正在使用 EXE 同目录的 local-config.yaml；不会读取中央发布配置。'
+
+defaults:
+  input_folder: ''
+  output_folder: ''
+  # Optional absolute path to a local template folder.
+  # template_folder: 'C:\\TestData\\Raw data standard Title'
+
+ui:
+  brand_title: Testing Raw Data Consolidation — Local Test
+  announcement: '本地测试配置已启用。删除或重命名 local-config.yaml 后恢复中央配置。'
+  help_text: ''
+
+managed_templates:
+  required: false
+  download_label: ''
+  update_message: ''
+  success_message: ''
+
+support_links:
+  user_guide: ''
+  issue_form: ''
