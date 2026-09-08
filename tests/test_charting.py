@@ -1,12 +1,19 @@
+import base64
+
+import numpy as np
 import pandas as pd
 import pytest
 
 from testdata_tool.charting import (
+    INITIAL_Y_PADDING_RATIO,
+    OVERVIEW_HEIGHT,
     RANGE_SLIDER_THICKNESS,
     build_chart_definitions,
     build_linked_chart_html,
     classify_channels,
     has_chart_numeric_values,
+    _y_bounds,
+    build_chart_definition,
 )
 
 
@@ -85,10 +92,40 @@ def test_mixed_channels_create_linked_charts_with_independent_y_bounds():
     assert [item.title for item in definitions] == ["温度通道", "其他通道"]
     assert definitions[0].y_bounds != definitions[1].y_bounds
     for definition in definitions:
+        assert definition.figure["layout"]["margin"]["t"] == 86
+        assert definition.figure["layout"]["annotations"][0]["y"] == 1.19
+        assert definition.figure["layout"]["legend"]["y"] == 1.05
         slider = definition.figure["layout"]["xaxis"]["rangeslider"]
-        assert slider["visible"] is True
+        assert slider["visible"] is False
         assert slider["thickness"] == RANGE_SLIDER_THICKNESS
-        assert slider["yaxis"]["rangemode"] == "auto"
+        assert slider["yaxis"]["rangemode"] == "fixed"
+        assert slider["yaxis"]["range"] == list(definition.y_bounds)
+
+
+def test_initial_y_bounds_include_a_clear_overview_padding():
+    low, high = _y_bounds(pd.Series([10.0, 20.0]))
+    assert low == 10.0 - (10.0 * INITIAL_Y_PADDING_RATIO)
+    assert high == 20.0 + (10.0 * INITIAL_Y_PADDING_RATIO)
+
+
+def test_chart_trace_retains_every_finite_input_point_without_plotly_simplification():
+    frame = pd.DataFrame(
+        {
+            "__axis_value": [0, 1, 2, 3, 4],
+            "__source_id": ["A", "A", "A", "A", "A"],
+            "Speed": [10.0, 10.0001, 10.0002, 10.0003, 10.0004],
+        }
+    )
+    definition = build_chart_definition(frame, ["Speed"], "speed", "其他通道")
+    assert definition is not None
+    trace = definition.figure["data"][0]
+    # Plotly's JSON encoder stores numeric vectors as typed base64 arrays.
+    # Decode their byte length to prove that no points vanished in transport.
+    encoded_count = lambda item: len(base64.b64decode(item["bdata"])) // np.dtype(item["dtype"]).itemsize
+    assert encoded_count(trace["x"]) == len(frame)
+    assert encoded_count(trace["y"]) == len(frame)
+    assert len(trace["customdata"]) == len(frame)
+    assert trace["line"]["simplify"] is False
 
 
 def test_empty_and_single_group_data_are_handled_without_empty_charts():
@@ -121,8 +158,19 @@ def test_html_contains_offline_plotly_and_linked_control_contract():
     assert "plotly.js" in html
     assert "vertical-handle high" in html
     assert "vertical-selection" in html
+    assert "const TRACK_INSET=28" in html
+    assert "selection.style.top=`${high}px`" in html
     assert "installXLink" in html
     assert "syncingX" in html
+    assert "installLocalWheelZoom" in html
+    assert "__wheelZoomUntil" in html
+    assert "installOverview" in html
+    assert "完整趋势预览" in html
+    assert "overview-window" in html
+    assert f"height:{OVERVIEW_HEIGHT}px" in html
+    assert "graph._fullLayout.xaxis.range.map(asNumber)" in html
+    assert "chart.figure.data.map(trace" in html
+    assert "Array.from(trace.x" not in html
     assert "quick-export" in html
     assert "Plotly.toImage" in html
     assert "<script src=" not in html

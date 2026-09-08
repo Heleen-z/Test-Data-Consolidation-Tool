@@ -11,3 +11,5 @@ dist/
 .testdata_tool/
 output/
 *.parquet
+outputs/ui-demo/
+node_modules/

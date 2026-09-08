@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 
 from testdata_tool import __version__
 from testdata_tool.charting import (
+    CHART_COMPONENT_CARD_HEIGHT,
     build_chart_definitions,
     build_linked_chart_html,
     has_chart_numeric_values,
@@ -26,6 +27,7 @@ from testdata_tool.pipeline import merge_prechecked
 from testdata_tool.preferences import load_preferences, save_preferences
 from testdata_tool.precheck import run_precheck
 from testdata_tool.query import filter_dataset, load_dataset
+from testdata_tool.normalize import normalize_header
 from testdata_tool.usage_logging import create_success_event, get_service
 
 
@@ -182,10 +184,18 @@ def _render_chart(result, config):
         format_func=lambda item: label_by_id.get(item, item),
     )
     visible = [column for column in frame.columns if not column.startswith("__")]
+    # Axes can appear under their raw candidate name (for example
+    # ``Timestamp [ms]``) as well as the configured output name.  Neither
+    # belongs in the signal picker or in the non-temperature chart.
+    rule = config.type_rules[test_type]
+    axis_names = {
+        normalize_header(value)
+        for value in [*rule.get("axis_output", []), *rule.get("axis_candidates", [])]
+    }
     numeric_channels = [
         column
         for column in visible
-        if column not in config.type_rules[test_type].get("axis_output", [])
+        if normalize_header(column) not in axis_names
         and has_chart_numeric_values(frame[column])
     ]
     defaults = numeric_channels[: min(4, len(numeric_channels))]
@@ -218,7 +228,7 @@ def _render_chart(result, config):
         )
         if chart_definitions:
             # Leave room below all Plotly cards for the component's PNG button.
-            chart_height = len(chart_definitions) * 518 + 58
+            chart_height = len(chart_definitions) * CHART_COMPONENT_CARD_HEIGHT + 58
             components.html(
                 build_linked_chart_html(
                     chart_definitions,
@@ -476,7 +486,27 @@ def main():
             progress = st.progress(0.0, text="准备合并")
 
             def update(done, total, message):
-                progress.progress(min(1.0, done / max(total, 1)), text=message)
+                # File reads have measurable completion counts.  Excel writing
+                # has its own sheet-level callbacks and is deliberately capped
+                # below 100% until the XLSX writer has really closed the file.
+                if message.startswith("excel:"):
+                    fraction = done / max(total, 1)
+                    value = min(0.95, 0.74 + (0.21 * fraction))
+                    label = message.removeprefix("excel:")
+                elif message.startswith("正在读取 "):
+                    value = 0.05 + (0.65 * (done / max(total, 1)))
+                    label = message
+                elif message == "正在整理数据并准备生成 Excel":
+                    value, label = 0.72, message
+                elif message.startswith("Excel 已保存"):
+                    value, label = 0.96, message
+                elif message == "正在写入处理日志":
+                    value, label = 0.98, message
+                elif message == "合并完成":
+                    value, label = 0.99, "正在确认合并结果"
+                else:
+                    value, label = 0.02, message
+                progress.progress(min(0.99, value), text=label)
 
             try:
                 merged = merge_prechecked(

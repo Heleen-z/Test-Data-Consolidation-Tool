@@ -183,7 +183,12 @@ def merge_prechecked(
     configured_name = config.app.get("export", {}).get("merged_name", "Merged Dataset.xlsx")
     output_path = _unique_output_path(output_folder, configured_name)
     if progress_callback:
-        progress_callback(total, total, "正在生成 Excel 工作簿")
+        progress_callback(total, total, "正在整理数据并准备生成 Excel")
+
+    def export_progress(done, count, message):
+        if progress_callback:
+            progress_callback(done, count, f"excel:{message}")
+
     export_workbook(
         output_path,
         datasets,
@@ -191,14 +196,19 @@ def merge_prechecked(
         validation,
         precheck,
         config,
+        progress_callback=export_progress,
     )
     validation_name = config.app.get("export", {}).get(
         "validation_name", "Validation Report.xlsx"
     )
     validation_path = _unique_output_path(output_folder, validation_name)
+    if progress_callback:
+        progress_callback(total, total, "Excel 已保存，正在生成验证报告")
     validation.to_excel(validation_path, index=False, engine="openpyxl")
     log_name = config.app.get("export", {}).get("log_name", "Processing Log.txt")
     log_path = output_folder / log_name
+    if progress_callback:
+        progress_callback(total, total, "正在写入处理日志")
     log_lines = [
         f"Testing Data Consolidation Tool {datetime.now():%Y-%m-%d %H:%M:%S}",
         f"App version: {__version__}",

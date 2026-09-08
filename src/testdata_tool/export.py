@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+from pyarrow.parquet import ParquetFile
 
 from . import __version__
 from .config import AppConfig
@@ -86,6 +87,7 @@ def export_workbook(
     validation: pd.DataFrame,
     precheck: PrecheckResult,
     config: AppConfig,
+    progress_callback=None,
 ) -> None:
     max_rows = min(
         1_048_575,
@@ -93,6 +95,17 @@ def export_workbook(
     )
     existing: set[str] = set()
     overview, type_summary = _summary_frames(precheck, datasets, config)
+    sheet_count = 1 + sum(
+        max(1, (ParquetFile(path).metadata.num_rows + max_rows - 1) // max_rows)
+        for path in datasets.values()
+    ) + 2  # Summary, data sheets, Source_Index, Validation.
+    completed = 0
+
+    def report(message: str) -> None:
+        if progress_callback:
+            progress_callback(completed, sheet_count, message)
+
+    report("正在准备 Excel 工作簿")
     with pd.ExcelWriter(
         output_path,
         engine="xlsxwriter",
@@ -107,6 +120,8 @@ def export_workbook(
         summary_sheet.freeze_panes(1, 0)
         summary_sheet.set_column(0, 0, 22)
         summary_sheet.set_column(1, 5, 46)
+        completed += 1
+        report("已完成 Summary 工作表")
 
         for test_type, dataset_path in datasets.items():
             frame = pd.read_parquet(dataset_path)
@@ -116,6 +131,7 @@ def export_workbook(
                 segment = frame.iloc[start : start + max_rows]
                 desired = test_type if parts == 1 else f"{test_type}_{part + 1}"
                 sheet_name = safe_sheet_name(desired, existing)
+                report(f"正在写入工作表 {sheet_name}（大文件可能需要几分钟）")
                 segment.to_excel(writer, sheet_name=sheet_name, index=False)
                 _format_sheet(
                     writer,
@@ -123,11 +139,21 @@ def export_workbook(
                     segment,
                     hidden=[column for column in segment.columns if column.startswith("__")],
                 )
+                completed += 1
+                report(f"已完成工作表 {sheet_name}")
 
         source_name = safe_sheet_name("Source_Index", existing)
+        report("正在写入 Source_Index 工作表")
         source_index.to_excel(writer, sheet_name=source_name, index=False)
         _format_sheet(writer, source_name, source_index)
+        completed += 1
+        report("已完成 Source_Index 工作表")
 
         validation_name = safe_sheet_name("Validation", existing)
+        report("正在写入 Validation 工作表")
         validation.to_excel(writer, sheet_name=validation_name, index=False)
         _format_sheet(writer, validation_name, validation)
+        completed += 1
+        # Closing the writer can still take time to compress the XLSX archive;
+        # report it as an active final stage rather than a completed job.
+        report("正在保存 Excel 工作簿")
