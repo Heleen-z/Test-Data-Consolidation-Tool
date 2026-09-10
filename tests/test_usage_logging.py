@@ -36,7 +36,8 @@ def test_event_uses_actual_merge_counts_and_directory(tmp_path):
     assert event["InputFormat"] == "csv;txt"
     assert event["TestTypes"] == "T09;T12"
     assert event["ProjectName"] == "项目甲"
-    assert event["ProjectCode"] == event["UserEmail"] == ""
+    assert event["UserEmail"] == ""
+    assert "ProjectCode" not in event
     assert event["Timestamp"].endswith("Z") and event["Duration"] == 1.23
     assert "1 个文件" in event["ErrorMessage"]
     result.type_rows = {}

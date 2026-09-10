@@ -128,6 +128,46 @@ def test_chart_trace_retains_every_finite_input_point_without_plotly_simplificat
     assert trace["line"]["simplify"] is False
 
 
+def test_chart_uses_webgl_without_incompatible_svg_simplification_above_1000_points():
+    count = 12_345
+    frame = pd.DataFrame(
+        {
+            "__axis_value": range(count),
+            "__source_id": ["A"] * count,
+            "Speed": range(count),
+        }
+    )
+    definition = build_chart_definition(frame, ["Speed"], "speed", "其他通道")
+    assert definition is not None
+    trace = definition.figure["data"][0]
+    assert trace["type"] == "scattergl"
+    encoded_count = lambda item: len(base64.b64decode(item["bdata"])) // np.dtype(item["dtype"]).itemsize
+    assert encoded_count(trace["x"]) == count
+    assert encoded_count(trace["y"]) == count
+    assert trace["line"]["width"] == 1.7
+    assert "simplify" not in trace["line"]
+
+
+def test_chart_preserves_missing_measurements_as_line_breaks():
+    frame = pd.DataFrame(
+        {
+            "__axis_value": [0, 1, 2],
+            "__source_id": ["A", "A", "A"],
+            "Speed": [10.0, None, 30.0],
+        }
+    )
+    definition = build_chart_definition(frame, ["Speed"], "speed", "其他通道")
+    assert definition is not None
+    trace = definition.figure["data"][0]
+    encoded_count = lambda item: len(base64.b64decode(item["bdata"])) // np.dtype(item["dtype"]).itemsize
+    assert encoded_count(trace["x"]) == 3
+    assert encoded_count(trace["y"]) == 3
+    decoded_y = np.frombuffer(base64.b64decode(trace["y"]["bdata"]), dtype=trace["y"]["dtype"])
+    assert decoded_y[[0, 2]].tolist() == [10.0, 30.0]
+    assert np.isnan(decoded_y[1])
+    assert trace.get("connectgaps", False) is False
+
+
 def test_empty_and_single_group_data_are_handled_without_empty_charts():
     frame = pd.DataFrame(
         {

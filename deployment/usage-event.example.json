@@ -11,7 +11,6 @@
   "UserEmail": "",
   "ComputerName": "EXAMPLE-PC",
   "ProjectName": "Example Project",
-  "ProjectCode": "",
   "ErrorMessage": "1 个文件合并失败；详情见本地验证信息",
   "FileCount": 3,
   "FailedFileCount": 1,

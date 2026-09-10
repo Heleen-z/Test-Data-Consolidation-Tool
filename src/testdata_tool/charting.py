@@ -173,8 +173,8 @@ def build_chart_definition(
         value_vars=channels,
         var_name="通道",
         value_name="数值",
-    ).dropna(subset=["__axis_value", "数值"])
-    if long_frame.empty:
+    ).dropna(subset=["__axis_value"])
+    if long_frame.empty or not np.isfinite(long_frame["数值"].to_numpy(dtype=float)).any():
         return None
 
     overview_y_bounds = _y_bounds(long_frame["数值"])
@@ -215,11 +215,13 @@ def build_chart_definition(
         },
         uirevision=chart_id,
     )
-    # Keep every valid source row in both the main trace and miniature preview.
-    # Plotly otherwise defaults ``line.simplify`` to true, which can simplify
-    # visually collinear segments in the browser even though Python did not
-    # downsample them.
-    figure.update_traces(line={"width": 1.7, "simplify": False})
+    # Keep every source row in both the main trace and miniature preview.
+    # ``px.line`` automatically switches to ``scattergl`` above 1,000 rows.
+    # ``line.simplify`` exists only on SVG ``scatter`` traces, so applying it
+    # to a WebGL trace makes the entire result page fail.  WebGL renders its
+    # supplied coordinates directly; no simplification option is required.
+    figure.update_traces(line={"width": 1.7})
+    figure.update_traces(line={"simplify": False}, selector={"type": "scatter"})
     figure.update_xaxes(
         title="时间 / 循环 / 频率",
         rangeslider={

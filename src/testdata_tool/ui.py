@@ -4,6 +4,7 @@ import os
 import time
 from uuid import uuid4
 from pathlib import Path
+from html import escape
 
 import pandas as pd
 import streamlit as st
@@ -41,6 +42,9 @@ st.markdown(
     [data-testid='stSkillsNudge']{display:none!important}
     .st-key-precheck_status [role='gridcell']{white-space:normal!important;line-height:1.28!important;overflow-wrap:anywhere!important}
     .st-key-precheck_status [role='columnheader']{white-space:normal!important;line-height:1.2!important}
+    .full-file-list{display:grid;gap:.45rem;margin:.35rem 0 1rem}
+    .full-file-item{padding:.55rem .7rem;border:1px solid rgba(49,51,63,.18);border-radius:.35rem;overflow-wrap:anywhere;word-break:break-word}
+    .full-file-meta{margin-top:.2rem;color:rgb(49,51,63);font-size:.86rem}
     </style>""",
     unsafe_allow_html=True,
 )
@@ -112,6 +116,33 @@ def _status_table(frame: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def _render_full_file_list(frame: pd.DataFrame, *, heading: str) -> None:
+    """Show every pre-check file name without the data-grid truncation."""
+    if frame.empty or "relative_path" not in frame:
+        return
+    st.markdown(f"#### {heading}")
+    entries = []
+    for _, row in frame.iterrows():
+        filename = escape(str(row.get("relative_path", "")))
+        status = escape(str(row.get("status", "")))
+        raw_type = row.get("test_type", "")
+        test_type = escape("未识别" if pd.isna(raw_type) or not raw_type else str(raw_type))
+        raw_messages = row.get("messages", [])
+        if isinstance(raw_messages, str):
+            message_text = raw_messages
+        elif raw_messages is None or (not isinstance(raw_messages, (list, tuple, set)) and pd.isna(raw_messages)):
+            message_text = ""
+        else:
+            message_text = "；".join(str(item) for item in raw_messages)
+        message = escape(_compact_message(message_text))
+        metadata = " · ".join(part for part in (test_type, status, message) if part)
+        entries.append(
+            f'<div class="full-file-item"><strong>{filename}</strong>'
+            f'<div class="full-file-meta">{metadata}</div></div>'
+        )
+    st.markdown('<div class="full-file-list">' + "".join(entries) + "</div>", unsafe_allow_html=True)
+
+
 def _compact_cell_text(value: object, limit: int = 90) -> str:
     text = str(value or "").replace("；", "、").replace("\n", " ").strip()
     return text if len(text) <= limit else f"{text[: limit - 1]}…"
@@ -165,6 +196,10 @@ def _merge_candidate_table(precheck) -> set[str]:
             "状态": st.column_config.TextColumn("状态", width="medium"),
             "检查摘要": st.column_config.TextColumn("检查摘要", width="large"),
         },
+    )
+    _render_full_file_list(
+        selected.rename(columns={"文件": "relative_path", "状态": "status", "测试类型": "test_type"}),
+        heading="本次合并文件（完整文件名）",
     )
     return set(selected.loc[selected["合并"], "_source_id"])
 
@@ -464,6 +499,7 @@ def main():
                 "检查摘要": st.column_config.TextColumn("检查摘要", width="large"),
             },
         )
+        _render_full_file_list(status_frame, heading="Pre-check 文件清单（完整文件名）")
         with st.expander("模板高亮字段预览"):
             for test_type, template in sorted(precheck.templates.items()):
                 st.markdown(f"**{test_type}** — {template.path.name}（第 {template.header_row} 行）")

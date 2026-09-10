@@ -119,7 +119,6 @@ usage_logging:
 - `UserEmail`：用户 UPN；可能为空。
 - `ComputerName`：电脑名。
 - `ProjectName`：输入目录最后一级名称。
-- `ProjectCode`：保留字段，当前为空。
 - `TestTypes`：实际输出测试类型，例如 `T09;T12`。
 - `AppVersion`：程序版本。
 - `ConfigVersion`：配置版本。

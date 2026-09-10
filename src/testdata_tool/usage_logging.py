@@ -77,7 +77,7 @@ def create_success_event(event_id, result, precheck, config, duration, identity=
         "Timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "InputFormat": ";".join(formats), "OutputFormat": "XLSX",
         "RowCount": int(rows), "Duration": round(max(0.0, duration), 2),
-        "ProjectName": precheck.input_folder.name, "ProjectCode": "",
+        "ProjectName": precheck.input_folder.name,
         "ErrorMessage": f"{failures} 个文件合并失败；详情见本地验证信息" if failures else "",
         "FileCount": len(selected), "FailedFileCount": failures,
         "TestTypes": ";".join(sorted(result.datasets)),

@@ -6,12 +6,12 @@
 
 创建列时先使用以下英文名称，确保内部名称一致，再按需修改中文显示名称。保留默认的 `Title` 列。不要手动指定 `ListItemEntityTypeFullName`：程序每轮读取服务器返回值。
 
-- 单行文本（最多 255 字符）：`Title`、`InputFormat`、`OutputFormat`、`UserName`、`UserEmail`、`ComputerName`、`ProjectName`、`ProjectCode`、`EventId`、`TestTypes`、`AppVersion`、`ConfigVersion`、`TemplateVersion`。
+- 单行文本（最多 255 字符）：`Title`、`InputFormat`、`OutputFormat`、`UserName`、`UserEmail`、`ComputerName`、`ProjectName`、`EventId`、`TestTypes`、`AppVersion`、`ConfigVersion`、`TemplateVersion`。
 - 日期和时间：`Timestamp`，包含时间；客户端传 UTC，网站根据所需时区显示。
 - 数字，零位小数：`RowCount`、`FileCount`、`FailedFileCount`。
 - 数字，两位小数：`Duration`，单位秒。
 - 多行纯文本：`ErrorMessage`，不要启用富文本或追加更改。
-- **EventId 必填，强制唯一值并建立索引。** `Title` 使用默认必填规则，其余列可选，允许邮箱或项目编号为空。
+- **EventId 必填，强制唯一值并建立索引。** `Title` 使用默认必填规则，其余列可选，允许邮箱为空。
 
 给使用者或对应公司用户组授予该列表的读取和新增列表项权限。读取权限用于提交前和提交结果不明确时的去重确认。不要用文档上传权限代替列表项权限。
 
@@ -24,7 +24,7 @@
 - `InputFormat`：本次选中文件的去重、小写扩展名，例如 `csv;txt`；`OutputFormat` 固定 `XLSX`。
 - `RowCount`：实际各测试类型输出行数之和；`Duration`：点击合并到完成结果保存的秒数，不含上传耗时。
 - `UserName` / `ComputerName`：当前 Windows 用户名和电脑名；`UserEmail`：`whoami /upn`，失败时为空。
-- `ProjectName`：输入目录最后一级名称，最长 255 字符；`ProjectCode` 保留为空。
+- `ProjectName`：输入目录最后一级名称，最长 255 字符。
 - `FileCount`：实际选中参与本次合并的文件数；`FailedFileCount`：来源索引中“合并失败”的文件数。
 - `TestTypes`：实际输出的测试类型，去重排序并用分号分隔，例如 `T09;T12`。
 - `AppVersion` / `ConfigVersion` / `TemplateVersion`：本次执行时的版本。
