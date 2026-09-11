@@ -165,7 +165,7 @@ class SharePointClient:
         self.site = settings.site_url.rstrip("/")
         self.list_url = self.site + "/_api/web/lists/getbytitle('" + quote(settings.list_name.replace("'", "''"), safe="") + "')"
 
-    def call(self, method, url, body=None, digest=None):
+    def call(self, method, url, body=None, digest=None, operation="请求 AI Portal"):
         headers = {"Accept": "application/json;odata=verbose", "Content-Type": "application/json;odata=verbose"}
         if digest:
             headers["X-RequestDigest"] = digest
@@ -182,25 +182,36 @@ class SharePointClient:
                         delay = max(2, (parsedate_to_datetime(retry_after) - datetime.now(timezone.utc)).total_seconds())
                     except (TypeError, ValueError):
                         pass
-            raise UploadError(f"AI Portal 返回 HTTP {status}", status in {0, 408, 429} or status >= 500, delay)
+            raise UploadError(
+                f"AI Portal：{operation}返回 HTTP {status}",
+                status in {0, 408, 429} or status >= 500,
+                delay,
+            )
         try:
             data = json.loads(response["body"])
             return data["d"]
         except (ValueError, KeyError, TypeError) as exc:
-            raise UploadError("AI Portal 返回登录页面或非预期响应") from exc
+            raise UploadError(f"AI Portal：{operation}返回登录页面或非预期响应") from exc
 
     def exists(self, event_id):
         query = urlencode({"$filter": f"EventId eq '{UUID(event_id)}'", "$select": "Id,EventId", "$top": "1"})
-        data = self.call("GET", self.list_url + "/items?" + query)
+        data = self.call("GET", self.list_url + "/items?" + query, operation="查询已有 EventId")
         return any(item.get("EventId") == event_id for item in data.get("results", []))
 
     def send(self, event):
         if self.exists(event["EventId"]):
             return
-        entity = self.call("GET", self.list_url + "?$select=ListItemEntityTypeFullName")["ListItemEntityTypeFullName"]
-        digest = self.call("POST", self.site + "/_api/contextinfo")["GetContextWebInformation"]["FormDigestValue"]
+        entity = self.call(
+            "GET", self.list_url + "?$select=ListItemEntityTypeFullName", operation="读取列表元数据"
+        )["ListItemEntityTypeFullName"]
+        digest = self.call(
+            "POST", self.site + "/_api/contextinfo", operation="获取写入令牌"
+        )["GetContextWebInformation"]["FormDigestValue"]
         try:
-            saved = self.call("POST", self.list_url + "/items", {"__metadata": {"type": entity}, **event}, digest)
+            saved = self.call(
+                "POST", self.list_url + "/items", {"__metadata": {"type": entity}, **event}, digest,
+                operation="新增使用记录",
+            )
             if saved.get("EventId") == event["EventId"] and saved.get("Id"):
                 return
             if not self.exists(event["EventId"]):

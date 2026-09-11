@@ -6,6 +6,7 @@ import pytest
 
 from testdata_tool.charting import (
     INITIAL_Y_PADDING_RATIO,
+    CHANNEL_COLORS,
     OVERVIEW_HEIGHT,
     RANGE_SLIDER_THICKNESS,
     build_chart_definitions,
@@ -100,6 +101,22 @@ def test_mixed_channels_create_linked_charts_with_independent_y_bounds():
         assert slider["thickness"] == RANGE_SLIDER_THICKNESS
         assert slider["yaxis"]["rangemode"] == "fixed"
         assert slider["yaxis"]["range"] == list(definition.y_bounds)
+
+
+def test_each_selected_channel_has_a_stable_distinct_colour():
+    frame = pd.DataFrame(
+        {
+            "__axis_value": [0, 1],
+            "__source_id": ["A", "A"],
+            "TCK01": [10.0, 20.0],
+            "TCK02": [30.0, 40.0],
+            "Speed": [50.0, 60.0],
+        }
+    )
+    definition = build_chart_definition(frame, ["TCK01", "TCK02", "Speed"], "signals", "信号")
+    assert definition is not None
+    colours = [trace["line"]["color"] for trace in definition.figure["data"]]
+    assert colours == CHANNEL_COLORS[:3]
 
 
 def test_initial_y_bounds_include_a_clear_overview_padding():
@@ -199,6 +216,10 @@ def test_html_contains_offline_plotly_and_linked_control_contract():
     assert "vertical-handle high" in html
     assert "vertical-selection" in html
     assert "const TRACK_INSET=28" in html
+    assert "grid-template-columns:minmax(0,1fr) 40px" in html
+    assert "width:6px" in html
+    assert "width:14px" in html
+    assert "vertical-handle::before" in html
     assert "selection.style.top=`${high}px`" in html
     assert "installXLink" in html
     assert "syncingX" in html

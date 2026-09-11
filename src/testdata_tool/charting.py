@@ -31,6 +31,18 @@ INITIAL_Y_PADDING_RATIO = 0.10
 CHART_COMPONENT_CARD_HEIGHT = PLOT_HEIGHT + 5 + OVERVIEW_HEIGHT
 QUICK_EXPORT_WIDTH_PX = 900
 QUICK_EXPORT_HEIGHT_PX = 3600
+# A colour-blind-safe, high-contrast sequence.  The same explicit colours are
+# retained in the main chart, full-data overview and exported PNG.
+CHANNEL_COLORS = [
+    "#0072B2",  # blue
+    "#D55E00",  # vermilion
+    "#009E73",  # green
+    "#CC79A7",  # purple
+    "#E69F00",  # amber
+    "#56B4E9",  # sky blue
+    "#6A3D9A",  # deep violet
+    "#8C564B",  # brown
+]
 
 
 @dataclass(frozen=True)
@@ -185,6 +197,7 @@ def build_chart_definition(
         color="通道",
         line_group="__source_id",
         hover_data=["__source_id"],
+        color_discrete_sequence=CHANNEL_COLORS,
     )
     figure.update_layout(
         height=PLOT_HEIGHT,
@@ -293,7 +306,7 @@ def build_linked_chart_html(
 <html><head><meta charset="utf-8" />
 <style>
 html,body{margin:0;padding:0;background:transparent;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.chart-card{display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:5px;align-items:stretch;margin:0 0 12px}
+.chart-card{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:4px;align-items:stretch;margin:0 0 12px}
 .chart-stack{min-width:0;display:flex;flex-direction:column;gap:5px}
 .plot{min-width:0;border:1px solid #d7e1e8;border-radius:7px;background:#fff;overflow:hidden}
 .overview-shell{position:relative;height:__OVERVIEW_HEIGHT__px;min-width:0;border:1px solid #8da5b7;border-radius:5px;background:#f4f8fb;overflow:hidden}
@@ -304,14 +317,15 @@ html,body{margin:0;padding:0;background:transparent;font-family:system-ui,-apple
 .overview-handle{position:absolute;top:-1px;bottom:-1px;width:12px;border:1px solid #0a5e8e;border-radius:5px;background:#fff;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,0,0,.22);cursor:ew-resize}
 .overview-handle.start{left:-7px}.overview-handle.end{right:-7px}
 .vertical-control{position:relative;height:__CARD_HEIGHT__px;box-sizing:border-box;overflow:hidden;touch-action:none;user-select:none;color:#425466}
-.vertical-track{position:absolute;left:21px;top:28px;bottom:28px;width:12px;border:1px solid #9aabba;border-radius:8px;background:#f0f5f8}
-.vertical-selection{position:absolute;left:22px;width:10px;border-radius:7px;background:rgba(10,94,142,.34);cursor:grab}
-.vertical-handle{position:absolute;left:15px;width:24px;height:10px;border:1px solid #0a5e8e;border-radius:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);cursor:ns-resize;transform:translateY(-50%)}
-.vertical-label{position:absolute;left:0;width:58px;font-size:10px;line-height:12px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#425466;transform:translateY(-50%)}
+.vertical-track{position:absolute;left:17px;top:28px;bottom:28px;width:6px;border:1px solid #9aabba;border-radius:5px;background:#f0f5f8}
+.vertical-selection{position:absolute;left:18px;width:4px;border-radius:4px;background:rgba(10,94,142,.46);cursor:grab}
+.vertical-handle{position:absolute;left:13px;width:14px;height:8px;border:1px solid #0a5e8e;border-radius:4px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);cursor:ns-resize;transform:translateY(-50%)}
+.vertical-handle::before{content:"";position:absolute;inset:-7px -5px}
+.vertical-label{position:absolute;left:0;width:40px;font-size:9px;line-height:11px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#425466;transform:translateY(-50%)}
 .vertical-label.high{top:13px}.vertical-label.low{bottom:1px;transform:none}
 .quick-export{margin:0 0 6px;padding:8px 13px;border:1px solid #0a5e8e;border-radius:6px;background:#0a5e8e;color:white;font:600 13px system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer}
 .quick-export:hover{background:#074b70}.quick-export:disabled{opacity:.62;cursor:wait}
-@media(max-width:700px){.chart-card{grid-template-columns:minmax(0,1fr) 48px}.vertical-control{height:__CARD_HEIGHT__px}.vertical-label{width:48px;font-size:9px}}
+@media(max-width:700px){.chart-card{grid-template-columns:minmax(0,1fr) 36px}.vertical-control{height:__CARD_HEIGHT__px}.vertical-track{left:15px}.vertical-selection{left:16px}.vertical-handle{left:11px}.vertical-label{width:36px;font-size:8px}}
 </style>
 <script>__PLOTLY_JS__</script></head><body>
 <main>__CARDS__<button class="quick-export" id="quick-export" type="button">__EXPORT_LABEL__</button></main>

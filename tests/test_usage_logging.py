@@ -146,6 +146,23 @@ def test_invalid_sharepoint_responses_are_never_acknowledged(status, body, retry
     with pytest.raises(UploadError) as caught:
         client.send({"EventId": str(uuid4())})
     assert caught.value.retryable == retryable
+    assert "查询已有 EventId" in str(caught.value)
+
+
+def test_upload_error_names_the_failed_sharepoint_operation():
+    event = {"EventId": str(uuid4()), "Title": "SUCCESS", "Timestamp": "2026-09-05T00:00:00Z"}
+    def response(data, status=200):
+        return {"status": status, "body": json.dumps({"d": data})}
+    def transport(method, url, headers, body):
+        if method == "GET" and "/items?" in url:
+            return response({"results": []})
+        if method == "GET":
+            return response({"ListItemEntityTypeFullName": "SP.Data.TestListItem"})
+        if url.endswith("contextinfo"):
+            return response({"GetContextWebInformation": {"FormDigestValue": "digest"}})
+        return {"status": 403, "body": ""}
+    with pytest.raises(UploadError, match="新增使用记录返回 HTTP 403"):
+        SharePointClient(Settings("online"), transport).send(event)
 
 
 @pytest.mark.parametrize("validate", [_validate_operations, _validate_local_operations])
