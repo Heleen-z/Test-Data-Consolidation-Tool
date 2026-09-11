@@ -199,8 +199,11 @@ class SharePointClient:
         return any(item.get("EventId") == event_id for item in data.get("results", []))
 
     def send(self, event):
-        if self.exists(event["EventId"]):
-            return
+        # Match the established eBOM flow: acquire the list metadata and form
+        # digest, then submit directly.  A preflight list-item query can be
+        # blocked by item-level policies even when the user is allowed to add
+        # a new item.  EventId remains unique; we query it only to resolve an
+        # ambiguous POST result without creating a duplicate record.
         entity = self.call(
             "GET", self.list_url + "?$select=ListItemEntityTypeFullName", operation="读取列表元数据"
         )["ListItemEntityTypeFullName"]

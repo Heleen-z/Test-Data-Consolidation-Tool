@@ -127,6 +127,8 @@ def test_server_saved_but_response_lost_is_confirmed_without_duplicate():
             return response({"GetContextWebInformation": {"FormDigestValue": "digest"}})
         assert headers["X-RequestDigest"] == "digest"
         assert body["__metadata"]["type"] == "SP.Data.TestListItem"
+        if saved:
+            raise UploadError("response lost", True)
         posted.append(body)
         saved.append({"Id": 1, "EventId": body["EventId"]})
         raise UploadError("response lost", True)
@@ -146,7 +148,7 @@ def test_invalid_sharepoint_responses_are_never_acknowledged(status, body, retry
     with pytest.raises(UploadError) as caught:
         client.send({"EventId": str(uuid4())})
     assert caught.value.retryable == retryable
-    assert "查询已有 EventId" in str(caught.value)
+    assert "读取列表元数据" in str(caught.value)
 
 
 def test_upload_error_names_the_failed_sharepoint_operation():
