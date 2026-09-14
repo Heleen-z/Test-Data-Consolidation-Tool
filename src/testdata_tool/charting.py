@@ -314,8 +314,8 @@ html,body{margin:0;padding:0;background:transparent;font-family:system-ui,-apple
 .overview-interaction{position:absolute;inset:0;z-index:3;touch-action:none;user-select:none}
 .overview-window{position:absolute;top:4px;bottom:24px;box-sizing:border-box;border:1px solid #0a5e8e;background:rgba(231,242,248,.12);cursor:grab}
 .overview-window:active{cursor:grabbing}
-.overview-handle{position:absolute;top:-1px;bottom:-1px;width:12px;border:1px solid #0a5e8e;border-radius:5px;background:#fff;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,0,0,.22);cursor:ew-resize}
-.overview-handle.start{left:-7px}.overview-handle.end{right:-7px}
+.overview-handle{position:absolute;top:-1px;bottom:-1px;width:5px;border:1px solid #0a5e8e;border-radius:2px;background:#fff;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,0,0,.22);cursor:ew-resize}
+.overview-handle.start{left:-3px}.overview-handle.end{right:-3px}
 .vertical-control{position:relative;height:__CARD_HEIGHT__px;box-sizing:border-box;overflow:hidden;touch-action:none;user-select:none;color:#425466}
 .vertical-track{position:absolute;left:17px;top:28px;bottom:28px;width:6px;border:1px solid #9aabba;border-radius:5px;background:#f0f5f8}
 .vertical-selection{position:absolute;left:18px;width:4px;border-radius:4px;background:rgba(10,94,142,.46);cursor:grab}

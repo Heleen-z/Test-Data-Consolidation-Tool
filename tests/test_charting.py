@@ -220,6 +220,8 @@ def test_html_contains_offline_plotly_and_linked_control_contract():
     assert "width:6px" in html
     assert "width:14px" in html
     assert "vertical-handle::before" in html
+    assert ".overview-handle{position:absolute;top:-1px;bottom:-1px;width:5px" in html
+    assert ".overview-handle.start{left:-3px}.overview-handle.end{right:-3px}" in html
     assert "selection.style.top=`${high}px`" in html
     assert "installXLink" in html
     assert "syncingX" in html
