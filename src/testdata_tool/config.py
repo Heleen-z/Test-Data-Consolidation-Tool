@@ -70,11 +70,12 @@ def _merge_operations(app: dict[str, Any], operations: dict[str, Any]) -> None:
     legacy = operations.get("usage_logging")
     if isinstance(legacy, dict) and "logging" not in operations:
         target = app.setdefault("logging", {})
-        target.update({
-            "mode": legacy.get("mode", "cache_only"),
-            "sharepoint_site_url": legacy.get("site_url", ""),
-            "list_name": legacy.get("list_name", ""),
-        })
+        converted = {"mode": legacy.get("mode", "cache_only")}
+        if "site_url" in legacy:
+            converted["sharepoint_site_url"] = legacy["site_url"]
+        if "list_name" in legacy:
+            converted["list_name"] = legacy["list_name"]
+        target.update(converted)
 
 
 def _version_tuple(value: str) -> tuple[int, int, int]:

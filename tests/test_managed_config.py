@@ -145,6 +145,17 @@ def test_local_sidecar_bypasses_central_configuration(tmp_path, monkeypatch):
     assert config.app["defaults"]["template_folder"] == "C:/Templates"
 
 
+def test_legacy_local_logging_mode_keeps_the_default_shared_destination(tmp_path, monkeypatch):
+    project_root = Path(__file__).resolve().parents[1]
+    (tmp_path / "local-config.yaml").write_text(
+        "schema_version: 1\nusage_logging:\n  mode: 'off'\n", encoding="utf-8"
+    )
+    monkeypatch.setattr("testdata_tool.managed_config.executable_folder", lambda: tmp_path)
+    config = load_config(project_root, managed=True)
+    assert config.app["logging"]["mode"] == "off"
+    assert config.app["logging"]["list_name"] == "AI Portal Tool Usage Logs"
+
+
 def test_operations_rejects_code_logic_keys(tmp_path, monkeypatch):
     project_root = Path(__file__).resolve().parents[1]
     central = tmp_path / "central"
