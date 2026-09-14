@@ -16,7 +16,8 @@ from urllib.parse import quote, urlencode, urlsplit
 from uuid import UUID, uuid4
 
 DEFAULT_SITE = "https://faurecia.sharepoint.com/sites/AIPortal"
-DEFAULT_LIST = "Test Data Consolidation Logs"
+DEFAULT_LIST = "AI Portal Tool Usage Logs"
+DEFAULT_TOOL_NAME = "Testing Data Consolidation Tool"
 REQUEST_TIMEOUT = 15
 LEASE_SECONDS = 300
 
@@ -26,17 +27,31 @@ class Settings:
     mode: str = "cache_only"
     site_url: str = DEFAULT_SITE
     list_name: str = DEFAULT_LIST
+    tool_name: str = DEFAULT_TOOL_NAME
 
     @classmethod
     def from_mapping(cls, values):
+        # `logging` is the shared eBOM-compatible schema.  Keep accepting the
+        # earlier `usage_logging` field names so existing local pilots retain
+        # their explicit configuration during the migration.
+        values = dict(values or {})
+        if "sharepoint_site_url" in values:
+            values = {
+                "mode": values.get("mode", "cache_only"),
+                "site_url": values.get("sharepoint_site_url", DEFAULT_SITE),
+                "list_name": values.get("list_name", DEFAULT_LIST),
+                "tool_name": values.get("tool_name", DEFAULT_TOOL_NAME),
+            }
         result = cls(**values)
         if result.mode not in {"cache_only", "online", "off"}:
-            raise ValueError("usage_logging.mode 必须是 cache_only、online 或 off")
+            raise ValueError("logging.mode 必须是 cache_only、online 或 off")
         url = urlsplit(result.site_url)
         if url.scheme != "https" or not url.hostname or url.username or url.password or url.query or url.fragment:
-            raise ValueError("usage_logging.site_url 必须是无凭据、查询参数的 HTTPS 站点地址")
+            raise ValueError("logging.sharepoint_site_url 必须是无凭据、查询参数的 HTTPS 站点地址")
         if not result.list_name.strip():
-            raise ValueError("usage_logging.list_name 不能为空")
+            raise ValueError("logging.list_name 不能为空")
+        if not result.tool_name.strip():
+            raise ValueError("logging.tool_name 不能为空")
         return result
 
 
@@ -64,7 +79,7 @@ def user_identity():
             "ComputerName": os.environ.get("COMPUTERNAME", "")}
 
 
-def create_success_event(event_id, result, precheck, config, duration, identity=None):
+def create_success_event(event_id, result, precheck, config, duration, identity=None, tool_name=DEFAULT_TOOL_NAME):
     """Create one event only after a usable merge result has been saved."""
     rows = sum(result.type_rows.values())
     if rows <= 0 or not result.output_path.is_file() or result.output_path.stat().st_size <= 0:
@@ -73,7 +88,7 @@ def create_success_event(event_id, result, precheck, config, duration, identity=
     formats = sorted({item.path.suffix.lstrip(".").lower() for item in precheck.files if item.source_id in selected})
     failures = int(result.source_index["状态"].eq("合并失败").sum())
     event = {
-        "EventId": str(UUID(str(event_id))), "Title": "SUCCESS",
+        "EventId": str(UUID(str(event_id))), "Title": "SUCCESS", "Toolname": tool_name,
         "Timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "InputFormat": ";".join(formats), "OutputFormat": "XLSX",
         "RowCount": int(rows), "Duration": round(max(0.0, duration), 2),

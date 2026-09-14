@@ -15,7 +15,7 @@
                                                         ↓ 生成可用结果
                                                 本机保存一条成功记录
                                                         ↓ online 模式
-AI Portal 的 SharePoint List：Test Data Consolidation Logs
+AI Portal 的 SharePoint List：AI Portal Tool Usage Logs（与 eBOM 共用，按 Toolname 区分）
                                                         ↓
                                          AI Portal 页面展示／使用量统计
 ```
@@ -70,14 +70,15 @@ Set-Location -LiteralPath 'C:\Users\HBZuo\Desktop\forvia\Test-Data-Consolidation
 1. 新建文件夹并放入 EXE。
 2. 从 [本地配置示例](../deployment/local-config.yaml.example) 复制一份，命名为 `local-config.yaml`，与 EXE 放在同一级。
 3. 文件资源管理器开启“查看 → 显示 → 文件扩展名”，确认文件不是 `local-config.yaml.txt`。
-4. 配置中应包含下列内容；有同名节时修改原节，不能重复追加第二个 `usage_logging`：
+4. 配置中应包含下列内容；有同名节时修改原节，不能重复追加第二个 `logging`：
 
 ```yaml
 schema_version: 1
-usage_logging:
+logging:
   mode: cache_only
-  site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: Test Data Consolidation Logs
+  sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: AI Portal Tool Usage Logs
+  tool_name: Testing Data Consolidation Tool
 ```
 
 以上可以作为最小本地配置，也可以保留示例中的联系信息等其它节。用空格缩进，不使用 Tab。不要向文件写入公司密码或登录令牌。
@@ -96,7 +97,7 @@ usage_logging:
 
 1. 打开 AI Portal，齿轮 → **Site contents / 网站内容**。
 2. 选择 **New / 新建 → List / 列表 → Blank list / 空白列表**。
-3. 名称准确填写 `Test Data Consolidation Logs`，描述可填“测试数据合并工具成功使用记录”。
+3. 使用 eBOM 共用的 `AI Portal Tool Usage Logs`；如该列表已存在，不要创建第二个工具专用列表。确保其中包含 `Toolname` 单行文本列。
 4. 确认保存位置是 AI Portal 站点，创建列表。
 
 如果要尽量模仿 ebom，也可以选择 **From existing list / 从现有列表**，以 `EBOM Conversion Logs` 为基础。微软说明此方式复制列、视图和格式而不复制已有数据；复制后仍要核对字段内部名、类型、必填约束、权限和自动规则，补齐下面字段。第一次部署推荐空白列表，便于逐项核对。[微软：创建列表](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/create-a-list)、[从现有列表创建](https://support.microsoft.com/en-us/office/create-a-new-list-based-on-the-columns-in-another-list-49666e8c-8c48-414f-8e5e-dc0e232acd27)
@@ -243,10 +244,11 @@ managed_templates:
 support_links:
   user_guide: ''
   issue_form: ''
-usage_logging:
+logging:
   mode: online
-  site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: Test Data Consolidation Logs
+  sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: AI Portal Tool Usage Logs
+  tool_name: Testing Data Consolidation Tool
 ```
 
 保存 `operations.yaml` 并关闭记事本。中央配置不能指定 `defaults.template_folder`；模板由发布清单中的整包管理。YAML 使用 UTF-8 和空格缩进。
@@ -367,7 +369,7 @@ Test Data Consolidation Tool\
 
 先在列表创建“最近成功记录”视图：过滤 `Title=SUCCESS`，按 `Timestamp` 降序，显示时间、用户、项目、测试类型、文件数、行数、耗时和失败数。可再建“部分文件失败”视图，过滤 `FailedFileCount>0`。
 
-如果 AI Portal 页面是 SharePoint 现代页面：打开页面 → Edit / 编辑 → 添加 **List / 列表 Web 部件** → 选择 `Test Data Consolidation Logs` 和上述视图 → 发布页面。页面展示不会扩大列表读取权限。[微软：List Web 部件](https://support.microsoft.com/en-us/SharePoint/lists/web-parts-and-apps-in-sharepoint/use-the-list-web-part)
+如果 AI Portal 页面是 SharePoint 现代页面：打开页面 → Edit / 编辑 → 添加 **List / 列表 Web 部件** → 选择 `AI Portal Tool Usage Logs`，并创建 `Toolname=Testing Data Consolidation Tool` 的视图 → 发布页面。页面展示不会扩大列表读取权限。[微软：List Web 部件](https://support.microsoft.com/en-us/SharePoint/lists/web-parts-and-apps-in-sharepoint/use-the-list-web-part)
 
 如果 AI Portal 前端使用 Power Apps 或自定义页面，仍使用这个 SharePoint List 作为数据源；页面入口由网站维护者接入，无需改变 EXE 的列表字段。
 

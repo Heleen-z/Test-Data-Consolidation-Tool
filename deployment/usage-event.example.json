@@ -1,7 +1,8 @@
 {
-  "__metadata": {"type": "SP.Data.TestDataConsolidationLogsListItem"},
+  "__metadata": {"type": "运行时读取的 ListItemEntityTypeFullName"},
   "EventId": "542d1740-69e9-4a6d-b904-d66536c9df16",
   "Title": "SUCCESS",
+  "Toolname": "Testing Data Consolidation Tool",
   "Timestamp": "2026-09-05T08:30:00Z",
   "InputFormat": "csv;txt",
   "OutputFormat": "XLSX",

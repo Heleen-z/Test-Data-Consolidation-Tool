@@ -32,6 +32,7 @@ def test_event_uses_actual_merge_counts_and_directory(tmp_path):
     event = create_success_event(uuid4(), result, precheck, config, 1.234,
                                  {"UserName": "tester", "UserEmail": "", "ComputerName": "PC"})
     assert event["Title"] == "SUCCESS"
+    assert event["Toolname"] == "Testing Data Consolidation Tool"
     assert (event["FileCount"], event["RowCount"], event["FailedFileCount"]) == (2, 15, 1)
     assert event["InputFormat"] == "csv;txt"
     assert event["TestTypes"] == "T09;T12"
@@ -176,6 +177,21 @@ def test_configuration_supports_both_central_and_local_overrides(validate):
     with pytest.raises(ManagedConfigError):
         validate({"schema_version": 1, "usage_logging": {"site_url": "http://example.com"}})
     assert validate({"schema_version": 1}) == {"schema_version": 1}
+
+
+@pytest.mark.parametrize("validate", [_validate_operations, _validate_local_operations])
+def test_configuration_supports_shared_ebom_logging_schema(validate):
+    config = validate({"schema_version": 1, "logging": {
+        "mode": "online",
+        "sharepoint_site_url": "https://faurecia.sharepoint.com/sites/AIPortal",
+        "list_name": "AI Portal Tool Usage Logs",
+        "tool_name": "Testing Data Consolidation Tool",
+    }})
+    settings = Settings.from_mapping(config["logging"])
+    assert settings.list_name == "AI Portal Tool Usage Logs"
+    assert settings.tool_name == "Testing Data Consolidation Tool"
+    with pytest.raises(ManagedConfigError, match="不能同时"):
+        validate({"schema_version": 1, "logging": {}, "usage_logging": {}})
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows COM transport")

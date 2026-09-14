@@ -309,7 +309,7 @@ def main():
     config = _load_configuration()
     usage = None
     try:
-        usage = get_service(config.app.get("usage_logging", {}))
+        usage = get_service(config.app.get("logging", config.app.get("usage_logging", {})))
         usage_key = (str(usage.outbox.path), usage.settings)
         if st.session_state.get("usage_initialized") != usage_key:
             usage.wake()
@@ -556,7 +556,10 @@ def main():
                 duration = time.monotonic() - started_at
                 if usage and usage.settings.mode != "off":
                     try:
-                        event = create_success_event(event_id, merged, precheck, config, duration)
+                        event = create_success_event(
+                            event_id, merged, precheck, config, duration,
+                            tool_name=usage.settings.tool_name,
+                        )
                         usage.enqueue(event)
                         st.session_state.pop("usage_record_error", None)
                     except Exception:

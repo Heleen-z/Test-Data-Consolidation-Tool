@@ -129,6 +129,7 @@ def _validate_manifest(data: dict[str, Any], root: Path) -> dict[str, Any]:
 
 
 _ALLOWED_OPERATION_KEYS = {
+    "logging",
     "usage_logging",
     "schema_version",
     "contact",
@@ -138,6 +139,7 @@ _ALLOWED_OPERATION_KEYS = {
     "support_links",
 }
 _ALLOWED_SECTION_KEYS = {
+    "logging": {"mode", "sharepoint_site_url", "list_name", "tool_name"},
     "usage_logging": {"mode", "site_url", "list_name"},
     "contact": {"owner", "email", "phone", "note"},
     "defaults": {"input_folder", "output_folder"},
@@ -158,6 +160,8 @@ def _validate_operations(data: dict[str, Any]) -> dict[str, Any]:
     unknown = set(data) - _ALLOWED_OPERATION_KEYS
     if unknown:
         raise ManagedConfigError(f"运营配置包含不允许的项目：{', '.join(sorted(unknown))}")
+    if "logging" in data and "usage_logging" in data:
+        raise ManagedConfigError("运营配置不能同时包含 logging 和 usage_logging")
     for section, allowed in _ALLOWED_SECTION_KEYS.items():
         value = data.get(section, {})
         if not isinstance(value, dict):
@@ -195,7 +199,7 @@ def _validate_operations(data: dict[str, Any]) -> dict[str, Any]:
         )
     from .usage_logging import Settings
     try:
-        Settings.from_mapping(data.get("usage_logging", {}))
+        Settings.from_mapping(data.get("logging", data.get("usage_logging", {})))
     except (TypeError, ValueError, AttributeError) as exc:
         raise ManagedConfigError(f"使用记录配置无效：{exc}") from exc
     return data

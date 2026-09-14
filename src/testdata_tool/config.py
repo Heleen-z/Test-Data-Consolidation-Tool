@@ -59,12 +59,22 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 
 
 def _merge_operations(app: dict[str, Any], operations: dict[str, Any]) -> None:
-    for section in ("contact", "defaults", "ui", "managed_templates", "support_links", "usage_logging"):
+    for section in ("contact", "defaults", "ui", "managed_templates", "support_links", "logging"):
         values = operations.get(section)
         if isinstance(values, dict):
             target = app.setdefault(section, {})
             if isinstance(target, dict):
                 target.update(values)
+    # Compatibility with releases that used the original Test Data-specific
+    # configuration name and field names.
+    legacy = operations.get("usage_logging")
+    if isinstance(legacy, dict) and "logging" not in operations:
+        target = app.setdefault("logging", {})
+        target.update({
+            "mode": legacy.get("mode", "cache_only"),
+            "sharepoint_site_url": legacy.get("site_url", ""),
+            "list_name": legacy.get("list_name", ""),
+        })
 
 
 def _version_tuple(value: str) -> tuple[int, int, int]:
@@ -97,7 +107,7 @@ def load_config(root: Path | None = None, managed: bool = True) -> AppConfig:
         raise ConfigError("test_types.yaml 缺少 test_types")
     from .usage_logging import Settings
     try:
-        Settings.from_mapping(app.get("usage_logging", {}))
+        Settings.from_mapping(app.get("logging", app.get("usage_logging", {})))
     except (TypeError, ValueError, AttributeError) as exc:
         raise ConfigError(f"使用记录配置无效：{exc}") from exc
     colors = app.get("templates", {}).get("selected_fill_rgb", [])

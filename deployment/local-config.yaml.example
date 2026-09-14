@@ -2,10 +2,11 @@
 # When present, it bypasses central configuration and local cache entirely.
 # Remove or rename local-config.yaml to return to normal central configuration.
 schema_version: 1
-usage_logging:
+logging:
   mode: cache_only
-  site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: Test Data Consolidation Logs
+  sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: AI Portal Tool Usage Logs
+  tool_name: Testing Data Consolidation Tool
 
 contact:
   owner: Local Test Mode

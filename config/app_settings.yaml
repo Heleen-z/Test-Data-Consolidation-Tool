@@ -3,10 +3,11 @@ defaults:
   output_folder: ''
   template_folder: ''
   default_template_library: ''
-usage_logging:
+logging:
   mode: cache_only
-  site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: Test Data Consolidation Logs
+  sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: AI Portal Tool Usage Logs
+  tool_name: Testing Data Consolidation Tool
 central_management:
   # The built EXE uses this stable UNC path. Source runs only use it when explicitly
   # overridden by TESTDATA_TOOL_CONFIG_ROOT or bootstrap.yaml.
