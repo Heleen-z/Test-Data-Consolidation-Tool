@@ -500,10 +500,6 @@ def main():
             },
         )
         _render_full_file_list(status_frame, heading="Pre-check 文件清单（完整文件名）")
-        with st.expander("模板高亮字段预览"):
-            for test_type, template in sorted(precheck.templates.items()):
-                st.markdown(f"**{test_type}** — {template.path.name}（第 {template.header_row} 行）")
-                st.write("、".join(template.fields))
 
         st.subheader("3. 合并")
         if precheck.valid_count <= 0:
