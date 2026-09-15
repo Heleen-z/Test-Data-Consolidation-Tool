@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 from typing import Iterator
+import unicodedata
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -18,12 +19,31 @@ EXCEL_EXTENSIONS = {".xlsx", ".xlsm"}
 def detect_encoding(path: Path) -> str:
     with path.open("rb") as handle:
         raw = handle.read(128 * 1024)
-    for encoding in ("utf-8-sig", "utf-8", "gb18030", "cp1252"):
+
+    # A German/European device export containing ``\xb0C`` is also valid GB18030:
+    # GB18030 interprets both bytes as one CJK character and silently drops the C.
+    # Therefore a first-success strategy is unsafe.  Compare every strict decode
+    # instead.  Correct decodes normally need the fewest non-ASCII characters;
+    # CJK is only a tie-breaker, so genuine Chinese exports still select GB18030.
+    candidates: list[tuple[tuple[int, int, int, int], int, str]] = []
+    preference = ("utf-8-sig", "utf-8", "gb18030", "cp1252")
+    for order, encoding in enumerate(preference):
         try:
-            raw.decode(encoding)
-            return encoding
+            text = raw.decode(encoding)
         except UnicodeDecodeError:
             continue
+        non_ascii = sum(ord(char) > 127 for char in text)
+        controls = sum(
+            unicodedata.category(char) == "Cc" and char not in "\r\n\t"
+            for char in text
+        )
+        cjk = sum("\u3400" <= char <= "\u9fff" for char in text)
+        # A byte stream such as B0 43 decodes as one CJK character in GB18030,
+        # but as degree sign + ASCII C in CP1252.  Prefer the latter only when
+        # the primary non-ASCII score is tied.
+        candidates.append(((controls, non_ascii, cjk, order), order, encoding))
+    if candidates:
+        return min(candidates)[2]
     return "latin1"
 
 

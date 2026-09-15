@@ -19,7 +19,10 @@ def main():
         from testdata_tool.precheck import run_precheck
         from testdata_tool.pipeline import merge_prechecked
         config = load_config()
-        assert config.app["usage_logging"]["mode"] == "off"
+        # Demo sidecars created before the logging configuration was renamed
+        # still use usage_logging.  Both forms must keep demo verification local.
+        logging = config.app.get("logging", config.app.get("usage_logging", {}))
+        assert logging.get("mode") == "off"
         checked = run_precheck(demo / "input", demo / "templates", Path(temporary) / "output", config)
         for item in checked.files:
             print(item.path.name, item.status, item.messages)
