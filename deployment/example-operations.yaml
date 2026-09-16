@@ -10,6 +10,12 @@ defaults:
   input_folder: ''
   output_folder: ''
 
+logging:
+  mode: online
+  sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  list_name: ToolUseLogs
+  tool_name: Testing Data Consolidation Tool
+
 ui:
   brand_title: Testing Raw Data Consolidation
   announcement: ''

@@ -11,7 +11,8 @@ import pytest
 
 from testdata_tool.managed_config import _validate_operations, _validate_local_operations, ManagedConfigError
 from testdata_tool.usage_logging import (
-    Outbox, Settings, SharePointClient, UploadError, UsageService, create_success_event,
+    Outbox, SHAREPOINT_FIELDS, Settings, SharePointClient, UploadError, UsageService,
+    create_failure_event, create_success_event, sharepoint_payload,
     powershell_request,
 )
 
@@ -38,9 +39,9 @@ def test_event_uses_actual_merge_counts_and_directory(tmp_path):
     assert event["TestTypes"] == "T09;T12"
     assert event["ProjectName"] == "项目甲"
     assert event["UserEmail"] == ""
-    assert "ProjectCode" not in event
+    assert event["ProjectCode"] == ""
     assert event["Timestamp"].endswith("Z") and event["Duration"] == 1.23
-    assert "1 个文件" in event["ErrorMessage"]
+    assert event["ErrorMessage"] == ""
     result.type_rows = {}
     with pytest.raises(ValueError):
         create_success_event(uuid4(), result, precheck, config, 1, {})
@@ -114,30 +115,46 @@ def test_retry_after_is_persisted_without_blocking_worker(tmp_path):
         assert db.execute("SELECT next_try FROM events").fetchone()[0] > time.time() + 110
 
 
-def test_server_saved_but_response_lost_is_confirmed_without_duplicate():
-    event = {"EventId": str(uuid4()), "Title": "SUCCESS", "Timestamp": "2026-09-05T00:00:00Z"}
-    saved, posted = [], []
+def test_upload_uses_only_tooluselogs_fields_and_accepts_item_id():
+    event = {
+        "EventId": str(uuid4()), "Title": "SUCCESS", "Timestamp": "2026-09-05T00:00:00Z",
+        "ProjectName": "Project", "FileCount": 3, "Status": "SUCCESS",
+    }
+    posted = []
     def response(data, status=200):
         return {"status": status, "body": json.dumps({"d": data})}
     def transport(method, url, headers, body):
-        if method == "GET" and "/items?" in url:
-            return response({"results": saved})
         if method == "GET":
             return response({"ListItemEntityTypeFullName": "SP.Data.TestListItem"})
         if url.endswith("contextinfo"):
             return response({"GetContextWebInformation": {"FormDigestValue": "digest"}})
         assert headers["X-RequestDigest"] == "digest"
         assert body["__metadata"]["type"] == "SP.Data.TestListItem"
-        if saved:
-            raise UploadError("response lost", True)
         posted.append(body)
-        saved.append({"Id": 1, "EventId": body["EventId"]})
-        raise UploadError("response lost", True)
+        return response({"Id": 1})
     client = SharePointClient(Settings("online"), transport)
-    client.send(event)
     client.send(event)
     assert len(posted) == 1
     assert posted[0]["Timestamp"] == event["Timestamp"]
+    assert set(posted[0]) == {"__metadata", *SHAREPOINT_FIELDS}
+    assert "EventId" not in posted[0] and "FileCount" not in posted[0] and "Status" not in posted[0]
+
+
+def test_failure_event_keeps_selected_formats_and_sanitizes_paths(tmp_path):
+    precheck = SimpleNamespace(input_folder=tmp_path / "项目甲", files=[
+        SimpleNamespace(source_id="a", path=tmp_path / "input.CSV"),
+        SimpleNamespace(source_id="b", path=tmp_path / "input.TXT"),
+    ])
+    event = create_failure_event(
+        uuid4(), precheck, {"a", "b"}, 1.234,
+        r"cannot export C:\Sensitive\project\raw.csv" + "\ntraceback",
+        {"UserName": "tester", "UserEmail": "", "ComputerName": "PC"},
+    )
+    assert event["Title"] == "FAILED"
+    assert event["RowCount"] == 0 and event["OutputFormat"] == "XLSX"
+    assert event["InputFormat"] == "csv;txt" and event["ProjectCode"] == ""
+    assert "Sensitive" not in event["ErrorMessage"] and "\n" not in event["ErrorMessage"]
+    assert set(sharepoint_payload(event)) == set(SHAREPOINT_FIELDS)
 
 
 @pytest.mark.parametrize("status,body,retryable", [
@@ -188,7 +205,7 @@ def test_configuration_supports_shared_ebom_logging_schema(validate):
         "tool_name": "Testing Data Consolidation Tool",
     }})
     settings = Settings.from_mapping(config["logging"])
-    assert settings.list_name == "AI Portal Tool Usage Logs"
+    assert settings.list_name == "ToolUseLogs"
     assert settings.tool_name == "Testing Data Consolidation Tool"
     with pytest.raises(ManagedConfigError, match="不能同时"):
         validate({"schema_version": 1, "logging": {}, "usage_logging": {}})

@@ -29,7 +29,7 @@ from testdata_tool.preferences import load_preferences, save_preferences
 from testdata_tool.precheck import run_precheck
 from testdata_tool.query import filter_dataset, load_dataset
 from testdata_tool.normalize import normalize_header
-from testdata_tool.usage_logging import create_success_event, get_service
+from testdata_tool.usage_logging import create_failure_event, create_success_event, get_service
 
 
 st.set_page_config(
@@ -564,6 +564,16 @@ def main():
                     st.session_state["usage_record_error"] = "合并已完成，但本次使用记录未保存。"
                 progress.progress(1.0, text="合并完成")
             except Exception as exc:
+                duration = time.monotonic() - started_at
+                if usage and usage.settings.mode != "off":
+                    try:
+                        usage.enqueue(create_failure_event(
+                            event_id, precheck, selected_source_ids, duration, exc,
+                            tool_name=usage.settings.tool_name,
+                        ))
+                        st.session_state.pop("usage_record_error", None)
+                    except Exception:
+                        st.session_state["usage_record_error"] = "合并失败，且本次使用记录未保存。"
                 st.error(f"合并失败：{exc}")
 
     if st.session_state.get("usage_record_error"):

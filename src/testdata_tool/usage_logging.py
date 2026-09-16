@@ -1,8 +1,9 @@
-"""Success-only usage events and a durable, asynchronous SharePoint outbox."""
+"""Conversion usage events and a durable, asynchronous SharePoint outbox."""
 from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import threading
@@ -12,19 +13,25 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from functools import lru_cache
 from pathlib import Path
-from urllib.parse import quote, urlencode, urlsplit
+from urllib.parse import quote, urlsplit
 from uuid import UUID, uuid4
 
 DEFAULT_SITE = "https://faurecia.sharepoint.com/sites/AIPortal"
-DEFAULT_LIST = "AI Portal Tool Usage Logs"
+DEFAULT_LIST = "ToolUseLogs"
 DEFAULT_TOOL_NAME = "Testing Data Consolidation Tool"
 REQUEST_TIMEOUT = 15
 LEASE_SECONDS = 300
+LEGACY_LIST_NAMES = {"EBOM Conversion Logs", "AI Portal Tool Usage Logs"}
+SHAREPOINT_FIELDS = (
+    "Title", "InputFormat", "OutputFormat", "RowCount", "Duration", "ErrorMessage",
+    "Timestamp", "UserName", "UserEmail", "ComputerName", "ProjectCode", "ProjectName",
+    "Toolname",
+)
 
 
 @dataclass(frozen=True)
 class Settings:
-    mode: str = "cache_only"
+    mode: str = "online"
     site_url: str = DEFAULT_SITE
     list_name: str = DEFAULT_LIST
     tool_name: str = DEFAULT_TOOL_NAME
@@ -37,11 +44,15 @@ class Settings:
         values = dict(values or {})
         if "sharepoint_site_url" in values:
             values = {
-                "mode": values.get("mode", "cache_only"),
+                "mode": values.get("mode", "online"),
                 "site_url": values.get("sharepoint_site_url", DEFAULT_SITE),
                 "list_name": values.get("list_name", DEFAULT_LIST),
                 "tool_name": values.get("tool_name", DEFAULT_TOOL_NAME),
             }
+        # Earlier releases pointed at shared or eBOM lists. Keep their other
+        # settings, but never send this tool's records back to an old list.
+        if values.get("list_name", "").strip() in LEGACY_LIST_NAMES:
+            values["list_name"] = DEFAULT_LIST
         result = cls(**values)
         if result.mode not in {"cache_only", "online", "off"}:
             raise ValueError("logging.mode 必须是 cache_only、online 或 off")
@@ -79,30 +90,66 @@ def user_identity():
             "ComputerName": os.environ.get("COMPUTERNAME", "")}
 
 
+def _event_formats(precheck, selected_source_ids):
+    return ";".join(sorted({
+        item.path.suffix.lstrip(".").lower()
+        for item in precheck.files if item.source_id in selected_source_ids and item.path.suffix
+    }))
+
+
+def _event_base(event_id, precheck, duration, identity, tool_name, title, error_message=""):
+    event = {
+        "EventId": str(UUID(str(event_id))), "Title": title, "Toolname": tool_name,
+        "Timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "InputFormat": "", "OutputFormat": "XLSX", "RowCount": 0,
+        "Duration": round(max(0.0, duration), 2), "ProjectCode": "",
+        "ProjectName": precheck.input_folder.name, "ErrorMessage": error_message,
+    }
+    event.update(user_identity() if identity is None else identity)
+    return event
+
+
 def create_success_event(event_id, result, precheck, config, duration, identity=None, tool_name=DEFAULT_TOOL_NAME):
     """Create one event only after a usable merge result has been saved."""
     rows = sum(result.type_rows.values())
     if rows <= 0 or not result.output_path.is_file() or result.output_path.stat().st_size <= 0:
         raise ValueError("没有可用合并结果，不能记录成功")
     selected = set(result.source_index["Source_ID"])
-    formats = sorted({item.path.suffix.lstrip(".").lower() for item in precheck.files if item.source_id in selected})
+    formats = _event_formats(precheck, selected)
     failures = int(result.source_index["状态"].eq("合并失败").sum())
-    event = {
-        "EventId": str(UUID(str(event_id))), "Title": "SUCCESS", "Toolname": tool_name,
-        "Timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "InputFormat": ";".join(formats), "OutputFormat": "XLSX",
-        "RowCount": int(rows), "Duration": round(max(0.0, duration), 2),
-        "ProjectName": precheck.input_folder.name,
-        "ErrorMessage": f"{failures} 个文件合并失败；详情见本地验证信息" if failures else "",
+    event = _event_base(event_id, precheck, duration, identity, tool_name, "SUCCESS")
+    event.update({
+        "InputFormat": formats, "RowCount": int(rows),
         "FileCount": len(selected), "FailedFileCount": failures,
         "TestTypes": ";".join(sorted(result.datasets)),
         "ConfigVersion": config.config_version, "TemplateVersion": config.template_version,
-    }
+    })
     from . import __version__
     event["AppVersion"] = __version__
     event.update(user_identity() if identity is None else identity)
     return {key: value[:255] if isinstance(value, str) and key != "ErrorMessage" else value
             for key, value in event.items()}
+
+
+def _safe_error_message(error):
+    """Keep the list useful without exposing local file paths or a traceback."""
+    text = re.sub(r"(?:[A-Za-z]:[\\/]|/)[^\s;，；:：]+", "[本地路径]", str(error))
+    return (" ".join(text.splitlines()[:1]).strip() or "转换失败")[:4000]
+
+
+def create_failure_event(event_id, precheck, selected_source_ids, duration, error, identity=None, tool_name=DEFAULT_TOOL_NAME):
+    event = _event_base(
+        event_id, precheck, duration, identity, tool_name, "FAILED", _safe_error_message(error)
+    )
+    event["InputFormat"] = _event_formats(precheck, selected_source_ids)
+    return {key: value[:255] if isinstance(value, str) and key != "ErrorMessage" else value
+            for key, value in event.items()}
+
+
+def sharepoint_payload(event):
+    """Return exactly the columns provisioned in ToolUseLogs for an event."""
+    defaults = {"ProjectCode": "", "ErrorMessage": "", "OutputFormat": "XLSX"}
+    return {field: event.get(field, defaults.get(field, "")) for field in SHAREPOINT_FIELDS}
 
 
 class Outbox:
@@ -208,39 +255,23 @@ class SharePointClient:
         except (ValueError, KeyError, TypeError) as exc:
             raise UploadError(f"AI Portal：{operation}返回登录页面或非预期响应") from exc
 
-    def exists(self, event_id):
-        query = urlencode({"$filter": f"EventId eq '{UUID(event_id)}'", "$select": "Id,EventId", "$top": "1"})
-        data = self.call("GET", self.list_url + "/items?" + query, operation="查询已有 EventId")
-        return any(item.get("EventId") == event_id for item in data.get("results", []))
-
     def send(self, event):
         # Match the established eBOM flow: acquire the list metadata and form
-        # digest, then submit directly.  A preflight list-item query can be
-        # blocked by item-level policies even when the user is allowed to add
-        # a new item.  EventId remains unique; we query it only to resolve an
-        # ambiguous POST result without creating a duplicate record.
+        # digest, then submit directly. ToolUseLogs has no EventId column, so
+        # confirmation is the successful item response.
         entity = self.call(
             "GET", self.list_url + "?$select=ListItemEntityTypeFullName", operation="读取列表元数据"
         )["ListItemEntityTypeFullName"]
         digest = self.call(
             "POST", self.site + "/_api/contextinfo", operation="获取写入令牌"
         )["GetContextWebInformation"]["FormDigestValue"]
-        try:
-            saved = self.call(
-                "POST", self.list_url + "/items", {"__metadata": {"type": entity}, **event}, digest,
-                operation="新增使用记录",
-            )
-            if saved.get("EventId") == event["EventId"] and saved.get("Id"):
-                return
-            if not self.exists(event["EventId"]):
-                raise UploadError("提交后尚未确认记录", retryable=True)
-        except UploadError as original:
-            try:
-                if self.exists(event["EventId"]):
-                    return
-            except UploadError:
-                pass
-            raise original
+        saved = self.call(
+            "POST", self.list_url + "/items",
+            {"__metadata": {"type": entity}, **sharepoint_payload(event)}, digest,
+            operation="新增使用记录",
+        )
+        if not saved.get("Id"):
+            raise UploadError("提交后未收到列表项标识", retryable=True)
 
 
 class UsageService:

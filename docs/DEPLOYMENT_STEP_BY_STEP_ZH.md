@@ -15,14 +15,14 @@
                                                         ↓ 生成可用结果
                                                 本机保存一条成功记录
                                                         ↓ online 模式
-AI Portal 的 SharePoint List：AI Portal Tool Usage Logs（与 eBOM 共用，按 Toolname 区分）
+AI Portal 的 SharePoint List：ToolUseLogs（按 Toolname 区分）
                                                         ↓
                                          AI Portal 页面展示／使用量统计
 ```
 
-三个地方各有用途：公共盘负责分发 EXE、配置和模板；用户电脑处理真实数据并保存使用记录队列；AI Portal 保存成功使用记录。程序界面在用户本机浏览器运行，AI Portal 无需托管这个 Streamlit 程序。
+三个地方各有用途：公共盘负责分发 EXE、配置和模板；用户电脑处理真实数据并保存使用记录队列；AI Portal 保存成功和失败转换记录。程序界面在用户本机浏览器运行，AI Portal 无需托管这个 Streamlit 程序。
 
-**成功口径：**一次点击“开始合并”并生成可用结果计一次。多个文件、多个测试类型仍计一次；部分文件失败但生成结果仍计一次，并附带失败数。整个合并失败、Pre-check、启动、刷新、下载和截图不计数。项目名自动取输入目录最后一级名称。
+**记录口径：**一次点击“开始合并”只记一次。生成可用结果记 SUCCESS；整体合并或导出失败记 FAILED。多个文件、多个测试类型仍只记一次；Pre-check、启动、刷新、下载和截图不计数。项目名自动取输入目录最后一级名称。
 
 ## 步骤 1：准备账号、目录和安装包
 
@@ -75,9 +75,9 @@ Set-Location -LiteralPath 'C:\Users\HBZuo\Desktop\forvia\Test-Data-Consolidation
 ```yaml
 schema_version: 1
 logging:
-  mode: cache_only
+  mode: online
   sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: AI Portal Tool Usage Logs
+  list_name: ToolUseLogs
   tool_name: Testing Data Consolidation Tool
 ```
 
@@ -97,33 +97,28 @@ logging:
 
 1. 打开 AI Portal，齿轮 → **Site contents / 网站内容**。
 2. 选择 **New / 新建 → List / 列表 → Blank list / 空白列表**。
-3. 使用 eBOM 共用的 `AI Portal Tool Usage Logs`；如该列表已存在，不要创建第二个工具专用列表。确保其中包含 `Toolname` 单行文本列。
+3. 使用 `ToolUseLogs`；确保其中包含 `Toolname` 单行文本列。字段定义和联调步骤以 [AI Portal 字段与接口说明](AI_PORTAL_USAGE_LOGGING.md) 为准。
 4. 确认保存位置是 AI Portal 站点，创建列表。
-
-如果要尽量模仿 ebom，也可以选择 **From existing list / 从现有列表**，以 `EBOM Conversion Logs` 为基础。微软说明此方式复制列、视图和格式而不复制已有数据；复制后仍要核对字段内部名、类型、必填约束、权限和自动规则，补齐下面字段。第一次部署推荐空白列表，便于逐项核对。[微软：创建列表](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/create-a-list)、[从现有列表创建](https://support.microsoft.com/en-us/office/create-a-new-list-based-on-the-columns-in-another-list-49666e8c-8c48-414f-8e5e-dc0e232acd27)
 
 **检查通过：**网站内容中能看到准确名称的列表；它位于 `/sites/AIPortal` 站点下。
 
-## 步骤 5：逐个创建字段并设置唯一编号
+## 步骤 5：创建 ToolUseLogs 字段
 
 **在哪里操作：刚创建的 SharePoint List。**
 
-点击“添加列 / Add column”，先用下面英文名创建，再按需改成中文显示名称。程序依赖英文内部名，不能先用中文建列、再仅把显示名称改成英文。已有列不要重复创建；默认 `Title` 直接保留。
+点击“添加列 / Add column”，先用下面英文名创建，再按需改成中文显示名称。程序依赖英文内部名，不能先用中文建列、再仅把显示名称改成英文。已有列不要重复创建；默认 `Title` 直接保留。除 `Title` 外不需要创建或配置 `EventId`、`FileCount`、`FailedFileCount`、`TestTypes` 或版本字段。
 
 ### 5.1 单行文本列（最大 255 字符）
 
 - `Title`：状态；默认列，程序写入 `SUCCESS`。
-- `EventId`：任务唯一编号；必须必填且唯一。
 - `InputFormat`：输入格式；例如 `csv;txt`。
 - `OutputFormat`：输出格式；固定 `XLSX`。
 - `UserName`：Windows 用户名。
 - `UserEmail`：用户 UPN；可能为空。
 - `ComputerName`：电脑名。
 - `ProjectName`：输入目录最后一级名称。
-- `TestTypes`：实际输出测试类型，例如 `T09;T12`。
-- `AppVersion`：程序版本。
-- `ConfigVersion`：配置版本。
-- `TemplateVersion`：模板版本。
+- `ProjectCode`：当前版本写入空字符串。
+- `Toolname`：工具名称。
 
 这些字段均使用“单行文本”，包括用户邮箱和项目名称；不要把它们设为“人员或组”或“查阅”类型。
 
@@ -131,24 +126,21 @@ logging:
 
 - `Timestamp`：日期和时间，包含时间。程序写入 UTC 完成时间，网站显示时区按站点设置。
 - `RowCount`：数字，0 位小数，实际输出行数之和。
-- `FileCount`：数字，0 位小数，实际选中文件数。
-- `FailedFileCount`：数字，0 位小数，本批合并失败文件数。
 - `Duration`：数字，2 位小数，处理耗时（秒）。
-- `ErrorMessage`：多行纯文本，不启用富文本和追加更改；仅用于部分失败的数量摘要。
+- `ErrorMessage`：多行纯文本，不启用富文本和追加更改；成功时为空，失败时为不包含本地路径的摘要。
 
-除默认 `Title` 和 `EventId` 外，其余字段设为非必填。设置方法见[微软：创建列](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/create-a-column-in-a-list-or-library)。
+除默认 `Title` 外，其余字段设为非必填。设置方法见[微软：创建列](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/create-a-column-in-a-list-or-library)。
 
-### 5.3 设置 EventId
+### 5.3 核对字段
 
-1. 齿轮 → List settings / 列表设置 → Columns / 列 → `EventId`。
-2. 将“要求此列包含信息”设为“是”。
-3. 将“强制唯一值 / Enforce unique values”设为“是”。
-4. 返回列表设置 → Indexed columns / 索引列，确认 `EventId` 有索引；没有则创建。
-5. 建议再为 `Timestamp` 建索引，便于后续按时间查询。
+1. 核对默认 `Title` 仍为必填，并允许 `SUCCESS` 和 `FAILED`。
+2. 核对 `Timestamp` 包含时间，`RowCount` 为整数，`Duration` 为两位小数。
+3. 不要把任何本工具未上传的旧字段设为必填。
+4. 可为 `Timestamp` 建索引，便于后续按时间查询。
 
-唯一值约束配合本机 UUID 防止离线补传重复计数。[微软：列表设置和列属性](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/edit-list-settings)
+本地队列会防止同一事件重复入队；由于列表不使用 EventId，在 POST 结果丢失时可能出现重复补传。[微软：列表设置和列属性](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/edit-list-settings)
 
-**检查通过：**包含默认 `Title` 在内共 19 个业务字段，类型正确，`EventId` 必填且唯一。默认系统列 ID、Created、Modified 等不计入这 19 个字段。
+**检查通过：**包含默认 `Title` 在内共 13 个业务字段，类型正确；默认系统列 ID、Created、Modified 等不计入业务字段。
 
 ## 步骤 6：设置列表权限，检查读取接口
 
@@ -158,14 +150,14 @@ logging:
 2. 查看现有继承权限。如果已满足需求，可以保持；如需单独管理本列表，再停止继承。
 3. 保留站点所有者和发布管理员权限。
 4. 为工具使用者所在公司组提供“查看列表项”和“添加列表项”权限。可请 SharePoint 管理员建立相应自定义权限级别；`Contribute / 参与` 通常还包含编辑和删除，不等同于仅新增。
-5. 若采用“用户只读取自己创建的项目”，管理员仍需能查看全量记录；补传应使用创建记录的同一公司账号。不要采用完全禁止用户读取的配置，程序需要按 EventId 查询去重。
+5. 使用者需要新增列表项权限；管理员保留查看全量记录权限。程序不再依赖 EventId 查询去重。
 
 权限、索引等入口说明见[微软列表设置文档](https://support.microsoft.com/en-us/sharepoint/lists/data-and-lists/edit-list-settings)。
 
 在已登录 AI Portal 的浏览器中打开下面的只读地址：
 
 ```text
-https://faurecia.sharepoint.com/sites/AIPortal/_api/web/lists/getbytitle('Test%20Data%20Consolidation%20Logs')?$select=Title,ListItemEntityTypeFullName
+https://faurecia.sharepoint.com/sites/AIPortal/_api/web/lists/getbytitle('ToolUseLogs')?$select=Title,ListItemEntityTypeFullName
 ```
 
 应返回包含列表标题和 `ListItemEntityTypeFullName` 的 JSON 或 XML，而不是登录页面或“找不到列表”。若要核对内部列名，打开：
@@ -185,13 +177,13 @@ https://faurecia.sharepoint.com/sites/AIPortal/_api/web/lists/getbytitle('Test%2
 3. 重开 EXE，等待状态从“待同步”变为“已同步”。
 4. 在 AI Portal 列表刷新，按 `Timestamp` 降序查看；新增数量应与原待同步数一致。
 5. 核对一条记录：`Title=SUCCESS`、`ProjectName` 为输入目录名、文件数和行数正确、`Timestamp` 为原转换完成时间。
-6. 再主动完成一次合并，确认新增 1 条、EventId 不同。刷新和下载不新增。
+6. 再主动完成一次合并，确认新增 1 条记录。刷新和下载不新增。
 
 **若未成功：**HTTP 401/403、登录页面说明要检查公司登录上下文、租户策略及权限；404 检查站点和列表名；400 检查内部列名、类型和必填字段。不要把 `whoami /upn` 能输出邮箱当作 SharePoint 登录成功，也不要手工添加密码到配置。
 
 当前工具沿用 ebom 的 MSXML2.XMLHTTP.6.0；公司环境若不能复用该登录通路，需要 IT 确认允许的认证方式，再评估程序认证调整。建好列表本身不能解决所有认证问题。未联通时可以继续 cache_only 试点，但应把“在线上传”标记为未验收。
 
-**检查通过：**至少一条由 EXE 实际上传的 SUCCESS 出现在列表中。可记录该 EventId 作为联调证据。
+**检查通过：**至少一条由 EXE 实际上传的 SUCCESS 出现在列表中；同时验证一次 FAILED 记录。
 
 ## 步骤 8：在本机准备完整中央发布目录
 
@@ -247,7 +239,7 @@ support_links:
 logging:
   mode: online
   sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: AI Portal Tool Usage Logs
+  list_name: ToolUseLogs
   tool_name: Testing Data Consolidation Tool
 ```
 
@@ -351,7 +343,7 @@ Test Data Consolidation Tool\
 7. 新建一个最终试点文件夹，只从公共盘复制 EXE，不带步骤 9 的 `bootstrap.yaml` 和步骤 3 的 `local-config.yaml`。
 8. 双击启动，确认 `central`、三种版本正确，再完成一次合并与 AI Portal 上传验证。
 
-**检查通过：**最终试点通过默认 UNC 地址读取公共盘，不依赖管理员 staging 路径。记录发布日期、发布人、三个版本、EXE SHA256 和一个成功上传 EventId。
+**检查通过：**最终试点通过默认 UNC 地址读取公共盘，不依赖管理员 staging 路径。记录发布日期、发布人、三个版本、EXE SHA256 和一次成功上传记录。
 
 ## 步骤 11：给普通用户发程序，在 AI Portal 展示记录
 
@@ -367,13 +359,13 @@ Test Data Consolidation Tool\
 
 ### 11.2 AI Portal 页面
 
-先在列表创建“最近成功记录”视图：过滤 `Title=SUCCESS`，按 `Timestamp` 降序，显示时间、用户、项目、测试类型、文件数、行数、耗时和失败数。可再建“部分文件失败”视图，过滤 `FailedFileCount>0`。
+先在列表创建“最近成功记录”视图：过滤 `Title=SUCCESS`，按 `Timestamp` 降序，显示时间、用户、项目、输入格式、行数和耗时。可再建“最近失败记录”视图，过滤 `Title=FAILED` 并显示 `ErrorMessage`。
 
-如果 AI Portal 页面是 SharePoint 现代页面：打开页面 → Edit / 编辑 → 添加 **List / 列表 Web 部件** → 选择 `AI Portal Tool Usage Logs`，并创建 `Toolname=Testing Data Consolidation Tool` 的视图 → 发布页面。页面展示不会扩大列表读取权限。[微软：List Web 部件](https://support.microsoft.com/en-us/SharePoint/lists/web-parts-and-apps-in-sharepoint/use-the-list-web-part)
+如果 AI Portal 页面是 SharePoint 现代页面：打开页面 → Edit / 编辑 → 添加 **List / 列表 Web 部件** → 选择 `ToolUseLogs`，并创建 `Toolname=Testing Data Consolidation Tool` 的视图 → 发布页面。页面展示不会扩大列表读取权限。[微软：List Web 部件](https://support.microsoft.com/en-us/SharePoint/lists/web-parts-and-apps-in-sharepoint/use-the-list-web-part)
 
 如果 AI Portal 前端使用 Power Apps 或自定义页面，仍使用这个 SharePoint List 作为数据源；页面入口由网站维护者接入，无需改变 EXE 的列表字段。
 
-统计成功次数按 `Title=SUCCESS` 的记录数计算。显示月份前先统一 `Timestamp` 时区，不要用 SharePoint 系统 `Created` 代替业务时间，因为离线补传的创建时间可能晚很多。`FileCount` 和 `RowCount` 可以分别求和表示处理量；拆分多个 TestTypes 后的跨类型总计要按 EventId 去重。若以后做 Power Apps / Power BI 统计，要处理服务端分页或委派，避免只统计客户端已加载的前一部分列表项。
+统计成功次数按 `Title=SUCCESS` 的记录数计算。显示月份前先统一 `Timestamp` 时区，不要用 SharePoint 系统 `Created` 代替业务时间，因为离线补传的创建时间可能晚很多。可汇总 `RowCount` 表示处理量；若以后做 Power Apps / Power BI 统计，要处理服务端分页或委派，避免只统计客户端已加载的前一部分列表项。
 
 ## 步骤 12：后续更新、离线验收与回滚
 
@@ -421,7 +413,7 @@ if (-not (Test-Path -LiteralPath $pendingManifest)) { throw '先准备并验证 
 - **显示 cache，版本没有更新：**本次中央读取或校验失败。检查清单、SHA256、配置字段和模板可读性，不要当作新发布已经生效。
 - **JSON 在记事本正常、程序读取失败：**核对 UTF-8 无 BOM、逗号和双引号；按步骤 9 重新生成。
 - **同一版本内容不同：**已经使用过的配置/模板版本目录被改写。发布新版本，不覆盖本机缓存绕过检查。
-- **列表返回 400：**核对 19 个字段内部名及类型，检查是否误设了额外必填字段，确认 EventId 唯一设置。
+- **列表返回 400：**核对 13 个字段内部名及类型，并检查是否误设了额外必填字段。
 - **列表返回 401/403 或登录页面：**区分权限不足与 MSXML 登录通路不可用；让 IT 核对，浏览器登录成功不代表辅助进程登录成功。
 - **提示已同步但没有新记录：**先确认 mode、目标站点和列表，再确认确实完成一次合并；“已同步”也可能表示当前没有待传记录。
 - **项目名不符合预期：**当前取输入目录末级名称，不是从原始文件或网站分配；按项目组织输入目录即可。
@@ -430,13 +422,13 @@ if (-not (Test-Path -LiteralPath $pendingManifest)) { throw '先准备并验证 
 ## 最终上线验收单
 
 - [ ] 公共盘三类版本目录及根清单完整，路径和 SHA256 检查通过。
-- [ ] AI Portal 列表位于正确站点，共 19 个业务字段，EventId 必填且唯一。
+- [ ] AI Portal 列表位于正确站点，共 13 个业务字段。
 - [ ] 正式用户包只含所需 EXE，没有误带 local-config 或 staging 的 bootstrap。
 - [ ] 最终试点显示 central，Summary 与日志中的三种版本正确。
 - [ ] 样例合并输出内容、文件数、行数正确。
 - [ ] EXE 实际上传成功，网站新增数量与成功任务数一致。
 - [ ] 刷新、查看和下载不新增；第二次主动成功合并新增一条。
-- [ ] 离线任务恢复后补传，EventId 和 Timestamp 保持不变。
+- [ ] 离线任务恢复后补传，Timestamp 保持不变。
 - [ ] 普通用户能按权限写入记录，管理员能查看统计。
 - [ ] 发布记录中保留 EXE 哈希、验证任务编号及回滚版本。
 

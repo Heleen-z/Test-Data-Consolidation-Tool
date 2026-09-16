@@ -68,9 +68,13 @@ def test_usage_failure_boundaries(tmp_path, monkeypatch, failure):
         monkeypatch.setattr(Outbox, "enqueue", fail)
     next(button for button in app.button if button.label == "开始合并").click().run(timeout=60)
     assert not app.exception
-    assert Outbox(queue_path()).status()[0] == 0
+    expected = 0 if failure == "cache" else 1
+    assert Outbox(queue_path()).status()[0] == expected
     if failure == "cache":
         assert any("合并文件" in item.value for item in app.success)
         assert any("本次使用记录未保存" in item.value for item in app.warning)
     else:
         assert any("合并失败" in item.value for item in app.error)
+        with Outbox(queue_path()).connect() as db:
+            payload = __import__("json").loads(db.execute("SELECT payload FROM events").fetchone()[0])
+        assert payload["Title"] == "FAILED" and payload["RowCount"] == 0

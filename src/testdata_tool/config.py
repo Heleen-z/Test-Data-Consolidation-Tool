@@ -70,7 +70,7 @@ def _merge_operations(app: dict[str, Any], operations: dict[str, Any]) -> None:
     legacy = operations.get("usage_logging")
     if isinstance(legacy, dict) and "logging" not in operations:
         target = app.setdefault("logging", {})
-        converted = {"mode": legacy.get("mode", "cache_only")}
+        converted = {"mode": legacy.get("mode", "online")}
         if "site_url" in legacy:
             converted["sharepoint_site_url"] = legacy["site_url"]
         if "list_name" in legacy:

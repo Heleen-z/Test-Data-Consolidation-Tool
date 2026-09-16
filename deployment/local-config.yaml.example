@@ -3,9 +3,9 @@
 # Remove or rename local-config.yaml to return to normal central configuration.
 schema_version: 1
 logging:
-  mode: cache_only
+  mode: online
   sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
-  list_name: AI Portal Tool Usage Logs
+  list_name: ToolUseLogs
   tool_name: Testing Data Consolidation Tool
 
 contact:
