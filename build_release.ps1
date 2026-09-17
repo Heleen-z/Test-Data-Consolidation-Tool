@@ -10,8 +10,10 @@ $VenvDir = Join-Path $ProjectRoot ".venv-build"
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 $ExePath = Join-Path $ProjectRoot "dist\Testing Data Consolidation Tool.exe"
 $InfoPath = Join-Path $ProjectRoot "dist\release-info.txt"
-$LocalConfigTemplate = Join-Path $ProjectRoot "deployment\local-config.yaml.example"
-$LocalConfigPath = Join-Path $ProjectRoot "dist\local-config.yaml"
+$RuntimeConfigSource = Join-Path $ProjectRoot "config"
+$RuntimeConfigTarget = Join-Path $ProjectRoot "dist\config"
+$RuntimeTemplateSource = Join-Path $ProjectRoot "Raw data standard Title"
+$RuntimeTemplateTarget = Join-Path $ProjectRoot "dist\template"
 
 function Write-Step {
     param([string]$Message)
@@ -127,10 +129,15 @@ if (-not (Test-Path -LiteralPath $ExePath)) {
     throw "Build finished but EXE was not found at: $ExePath"
 }
 
-if ((Test-Path -LiteralPath $LocalConfigTemplate) -and -not (Test-Path -LiteralPath $LocalConfigPath)) {
-    Copy-Item -LiteralPath $LocalConfigTemplate -Destination $LocalConfigPath
-    Write-Host "Created local test configuration: $LocalConfigPath" -ForegroundColor Yellow
+# The release is a portable three-part folder: EXE, editable config, and
+# standard templates.  They are intentionally external to the one-file EXE.
+foreach ($target in @($RuntimeConfigTarget, $RuntimeTemplateTarget)) {
+    if (Test-Path -LiteralPath $target) {
+        Remove-Item -LiteralPath $target -Recurse -Force
+    }
 }
+Copy-Item -LiteralPath $RuntimeConfigSource -Destination $RuntimeConfigTarget -Recurse
+Copy-Item -LiteralPath $RuntimeTemplateSource -Destination $RuntimeTemplateTarget -Recurse
 
 $Hash = (Get-FileHash -LiteralPath $ExePath -Algorithm SHA256).Hash
 $SizeMb = [math]::Round((Get-Item -LiteralPath $ExePath).Length / 1MB, 2)

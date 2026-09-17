@@ -15,7 +15,7 @@
 
 版本 1.1.0 起支持从统一公共盘读取版本化运营配置和标准模板包。程序、运营配置和模板分别维护版本；支持邮箱、公告和模板更新不再要求重新生成 EXE。公共盘不可用时使用本机最后一次有效缓存。
 
-生产部署方法和生命周期规则见 [docs/MANAGED_CONFIGURATION.md](docs/MANAGED_CONFIGURATION.md)，公共盘文件搭建、JSON 修改、路径检查和回滚的逐步教程见 [docs/PUBLIC_DRIVE_RELEASE_GUIDE.md](docs/PUBLIC_DRIVE_RELEASE_GUIDE.md)。
+发布目录采用可携带布局：EXE、`config` 配置目录和 `template` 模板目录必须保持同级；所有可调整的发布路径从 `config/app_settings.yaml` 读取。生产部署方法和生命周期规则见 [docs/MANAGED_CONFIGURATION.md](docs/MANAGED_CONFIGURATION.md)，公共盘文件搭建、JSON 修改、路径检查和回滚的逐步教程见 [docs/PUBLIC_DRIVE_RELEASE_GUIDE.md](docs/PUBLIC_DRIVE_RELEASE_GUIDE.md)。
 
 ## 使用方法
 

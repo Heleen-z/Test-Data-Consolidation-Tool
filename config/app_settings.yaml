@@ -1,8 +1,9 @@
 defaults:
   input_folder: ''
   output_folder: ''
-  template_folder: ''
-  default_template_library: ''
+  # Relative paths are resolved from the folder containing the EXE.
+  template_folder: 'template'
+  default_template_library: 'template'
 logging:
   mode: online
   sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
@@ -11,9 +12,9 @@ logging:
   excel_bridge_enabled: true
   seed_url: "https://faurecia.sharepoint.com/sites/ES-Asia_RandD2/Released Documents/CHD-F-DSE-1018 BOM Conversion Tool.xlsm"
 central_management:
-  # The built EXE uses this stable UNC path. Source runs only use it when explicitly
-  # overridden by TESTDATA_TOOL_CONFIG_ROOT or bootstrap.yaml.
-  central_root: '\\10.162.2.55\shares\Engineering -1890\TC-AFO\DT&AI\Release\Test Data Consolidation Tool'
+  # Leave empty for the portable EXE/config/template release layout.  A managed
+  # public-drive release can still be opted into with bootstrap.yaml.
+  central_root: ''
   startup_timeout_seconds: 5
 contact:
   owner: Data Tool Support

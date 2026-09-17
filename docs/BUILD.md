@@ -6,6 +6,8 @@
 
 Windows 依赖包含 pywin32，桥辅助进程通过 multiprocessing freeze_support 从同一 EXE 启动。运行 python scripts/verify_excel_bridge.py 做本机回环验证；可选 --sharepoint-read-only 只读验证公司 SharePoint 登录，不创建生产列表项。
 
+构建完成后的发布目录是可携带结构：`Testing Data Consolidation Tool.exe`、`config\` 和 `template\` 位于同一目录。EXE 启动时优先读取同级 `config\app_settings.yaml` 与 `config\test_types.yaml`；标准模板读取 `config\app_settings.yaml` 中 `defaults.template_folder` 指向的相对目录（默认 `template`）。复制到公共盘或用户电脑时必须完整保留这三个项目。
+
 ## 环境
 
 - Windows 10/11 64 位；

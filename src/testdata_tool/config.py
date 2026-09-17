@@ -22,7 +22,14 @@ class ConfigError(ValueError):
 
 def project_root() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+        # A released tool is deliberately portable: its editable configuration
+        # lives beside the EXE, rather than inside PyInstaller's temporary
+        # extraction directory.  Keep the bundled copy only as a recovery
+        # fallback for a damaged or incomplete deployment.
+        external = Path(sys.executable).resolve().parent
+        if (external / "config" / "app_settings.yaml").is_file():
+            return external
+        return Path(getattr(sys, "_MEIPASS", external))
     return Path(__file__).resolve().parents[2]
 
 
