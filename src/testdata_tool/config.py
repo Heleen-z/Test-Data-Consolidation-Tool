@@ -27,7 +27,8 @@ def project_root() -> Path:
         # extraction directory.  Keep the bundled copy only as a recovery
         # fallback for a damaged or incomplete deployment.
         external = Path(sys.executable).resolve().parent
-        if (external / "config" / "app_settings.yaml").is_file():
+        if ((external / "config" / "config.yaml").is_file()
+                or (external / "config" / "app_settings.yaml").is_file()):
             return external
         return Path(getattr(sys, "_MEIPASS", external))
     return Path(__file__).resolve().parents[2]
@@ -97,8 +98,17 @@ def _version_tuple(value: str) -> tuple[int, int, int]:
 def load_config(root: Path | None = None, managed: bool = True) -> AppConfig:
     root = root or project_root()
     config_dir = root / "config"
-    app = _read_yaml(config_dir / "app_settings.yaml")
-    test_types = _read_yaml(config_dir / "test_types.yaml")
+    portable_config = config_dir / "config.yaml"
+    if portable_config.is_file():
+        # Released folders carry exactly one editable configuration document.
+        # It contains the historical app settings, test-type definitions and
+        # anomaly rules under their existing keys.
+        app = _read_yaml(portable_config)
+        test_types = app
+    else:
+        # Keep older source checkouts usable while migration completes.
+        app = _read_yaml(config_dir / "app_settings.yaml")
+        test_types = _read_yaml(config_dir / "test_types.yaml")
     snapshot: ManagedSnapshot | None = None
     local_operations = load_local_operations() if managed else None
     local_mode = local_operations is not None

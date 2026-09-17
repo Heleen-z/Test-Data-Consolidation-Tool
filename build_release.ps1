@@ -136,7 +136,8 @@ foreach ($target in @($RuntimeConfigTarget, $RuntimeTemplateTarget)) {
         Remove-Item -LiteralPath $target -Recurse -Force
     }
 }
-Copy-Item -LiteralPath $RuntimeConfigSource -Destination $RuntimeConfigTarget -Recurse
+New-Item -ItemType Directory -Force -Path $RuntimeConfigTarget | Out-Null
+Copy-Item -LiteralPath (Join-Path $RuntimeConfigSource 'config.yaml') -Destination $RuntimeConfigTarget
 Copy-Item -LiteralPath $RuntimeTemplateSource -Destination $RuntimeTemplateTarget -Recurse
 
 $Hash = (Get-FileHash -LiteralPath $ExePath -Algorithm SHA256).Hash

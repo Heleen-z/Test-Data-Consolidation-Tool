@@ -8,7 +8,7 @@ def test_frozen_release_prefers_config_beside_executable(tmp_path, monkeypatch):
     executable = tmp_path / "Testing Data Consolidation Tool.exe"
     config = tmp_path / "config"
     config.mkdir()
-    (config / "app_settings.yaml").write_text("defaults: {}\n", encoding="utf-8")
+    (config / "config.yaml").write_text("defaults: {}\n", encoding="utf-8")
     monkeypatch.setattr("testdata_tool.config.sys.frozen", True, raising=False)
     monkeypatch.setattr("testdata_tool.config.sys.executable", str(executable))
 
