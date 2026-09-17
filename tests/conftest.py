@@ -11,6 +11,29 @@ YELLOW = PatternFill("solid", fgColor="FFFF00")
 GREEN = PatternFill("solid", fgColor="00B050")
 
 
+@pytest.fixture(autouse=True)
+def isolated_usage_network(tmp_path, monkeypatch):
+    """All tests use an isolated queue; production transport is never a test fixture."""
+    from testdata_tool.usage_logging import SharePointClient, UploadError, _services
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    from testdata_tool.usage_logging import UsageService
+    original_wake = UsageService.wake
+    monkeypatch.setattr(UsageService, "wake", lambda self: None)
+    def blocked(*args, **kwargs):
+        raise UploadError("自动测试禁止访问真实 SharePoint")
+    monkeypatch.setattr(SharePointClient, "__init__", _isolated_client_init(SharePointClient.__init__, blocked))
+    yield original_wake
+    for service in list(_services.values()):
+        service._close_bridge()
+    _services.clear()
+
+
+def _isolated_client_init(original, blocked):
+    def init(self, settings, request=None):
+        original(self, settings, request=blocked if request is None else request)
+    return init
+
+
 def make_template(path: Path, headers: list[str], selected: set[str], header_row: int = 1):
     workbook = Workbook()
     sheet = workbook.active
@@ -57,4 +80,3 @@ def sample_workspace(tmp_path):
         encoding="utf-8",
     )
     return input_folder, output_folder, template_folder
-

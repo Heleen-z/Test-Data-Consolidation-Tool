@@ -7,6 +7,8 @@ logging:
   sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
   list_name: ToolUseLogs
   tool_name: Testing Data Consolidation Tool
+  excel_bridge_enabled: true
+  seed_url: "https://faurecia.sharepoint.com/sites/ES-Asia_RandD2/Released Documents/CHD-F-DSE-1018 BOM Conversion Tool.xlsm"
 
 contact:
   owner: Local Test Mode

@@ -1,5 +1,11 @@
 # 开发、测试与 Windows 打包
 
+## Excel 日志桥资源
+
+发布包包含 src/testdata_tool/bridge 下的预构建 excel_bridge.xlsm、Bridge.bas 和哈希清单。修改 VBA 后，在具备 Excel 和开发用 VBA 工程访问权限的环境运行 python scripts/build_excel_bridge.py。脚本生成工作簿后会重新打开并验证宏入口；终端用户无需 VBA 工程访问权限。PyInstaller 构建会校验资源哈希，缺失或不匹配时停止。
+
+Windows 依赖包含 pywin32，桥辅助进程通过 multiprocessing freeze_support 从同一 EXE 启动。运行 python scripts/verify_excel_bridge.py 做本机回环验证；可选 --sharepoint-read-only 只读验证公司 SharePoint 登录，不创建生产列表项。
+
 ## 环境
 
 - Windows 10/11 64 位；

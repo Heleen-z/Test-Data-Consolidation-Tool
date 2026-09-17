@@ -1,5 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all, collect_submodules
+from testdata_tool.excel_bridge import verified_workbook
+
+verified_workbook()  # Missing, stale, or modified bridge assets block release.
 
 streamlit_data, streamlit_bins, streamlit_hidden = collect_all("streamlit")
 plotly_data, plotly_bins, plotly_hidden = collect_all("plotly")
@@ -16,6 +19,7 @@ datas = sorted(streamlit_data + plotly_data + [
     ("Raw data standard Title", "Raw data standard Title"),
     ("src/testdata_tool/ui.py", "testdata_tool"),
     ("src/testdata_tool/sharepoint_request.ps1", "testdata_tool"),
+    ("src/testdata_tool/bridge", "testdata_tool/bridge"),
 ])
 binaries = sorted(streamlit_bins + plotly_bins)
 hiddenimports = sorted(set(streamlit_hidden + plotly_hidden + collect_submodules("testdata_tool") + [
@@ -24,6 +28,13 @@ hiddenimports = sorted(set(streamlit_hidden + plotly_hidden + collect_submodules
     "openpyxl",
     "xlsxwriter",
     "yaml",
+    "win32com.client",
+    "pythoncom",
+    "pywintypes",
+    "win32process",
+    "win32event",
+    "win32api",
+    "win32timezone",
 ]))
 
 a = Analysis(

@@ -58,6 +58,8 @@ def _apply_bootstrap_arguments(arguments: list[str]) -> None:
 
 
 def main() -> None:
+    from multiprocessing import freeze_support
+    freeze_support()
     from streamlit.web import cli as streamlit_cli
     from testdata_tool.config import load_config
 

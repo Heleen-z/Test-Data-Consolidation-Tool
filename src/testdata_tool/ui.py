@@ -508,9 +508,12 @@ def main():
             st.caption("可合并文件默认全选；取消勾选后，该文件不会参与本次合并。")
             selected_source_ids = _merge_candidate_table(precheck)
             st.caption(f"已选择 {len(selected_source_ids)} / {precheck.valid_count} 个可合并文件")
-        if precheck.valid_count > 0 and st.button(
+        merge_clicked = precheck.valid_count > 0 and st.button(
             "开始合并", type="primary", disabled=not selected_source_ids
-        ):
+        )
+        if usage:
+            _manual_usage_sync(usage)
+        if merge_clicked:
             event_id = str(uuid4())
             started_at = time.monotonic()
             if usage:
@@ -579,10 +582,38 @@ def main():
     if st.session_state.get("usage_record_error"):
         st.warning(st.session_state["usage_record_error"])
     if usage:
+        if precheck is None:
+            _manual_usage_sync(usage)
         _usage_status(usage)
     merged = st.session_state.get("merge_result")
     if merged:
         _render_chart(merged, config)
+
+
+@st.fragment(run_every=5)
+def _manual_usage_sync(usage):
+    try:
+        state = usage.snapshot()
+        if state["pending"] > 5 or state["active"]:
+            busy = state["running"]
+            st.button(
+                "正在补传…" if busy else "手动补传日志",
+                key="manual_usage_sync", disabled=busy or state["mode"] != "online",
+                on_click=usage.request_manual_sync,
+            )
+            st.caption(f"待补传 {state['pending']} 条")
+            if state["mode"] != "online":
+                st.caption("开启线上模式后可补传")
+        if state["active"]:
+            st.caption(f"正在补传：已成功 {state['sent']} 条，失败 {state['failed']} 条")
+        elif state["completed"]:
+            st.caption(f"本次已补传 {state['sent']} 条，剩余 {state['pending']} 条")
+            if state["error"]:
+                st.caption(f"日志已保留：{state['error']}")
+            elif state["pending"]:
+                st.caption("部分记录等待重试或正由其他实例处理")
+    except Exception:
+        st.caption("使用记录：暂时无法读取补传状态")
 
 
 @st.fragment(run_every=5)

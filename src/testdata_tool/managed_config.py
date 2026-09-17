@@ -139,7 +139,7 @@ _ALLOWED_OPERATION_KEYS = {
     "support_links",
 }
 _ALLOWED_SECTION_KEYS = {
-    "logging": {"mode", "sharepoint_site_url", "list_name", "tool_name"},
+    "logging": {"mode", "sharepoint_site_url", "list_name", "tool_name", "excel_bridge_enabled", "seed_url"},
     "usage_logging": {"mode", "site_url", "list_name"},
     "contact": {"owner", "email", "phone", "note"},
     "defaults": {"input_folder", "output_folder"},
@@ -181,7 +181,9 @@ def _validate_operations(data: dict[str, Any]) -> dict[str, Any]:
         if section in ("schema_version", "managed_templates"):
             continue
         if isinstance(values, dict):
-            invalid = [key for key, value in values.items() if not isinstance(value, str)]
+            invalid = [key for key, value in values.items()
+                       if not isinstance(value, str)
+                       and not (section == "logging" and key == "excel_bridge_enabled" and isinstance(value, bool))]
             if invalid:
                 raise ManagedConfigError(
                     f"运营配置 {section} 的字段必须是文本：{', '.join(invalid)}"

@@ -16,6 +16,7 @@ dependencies = [
   "PyYAML>=6,<7",
   "streamlit>=1.41,<2",
   "xlsxwriter>=3.2,<4",
+  "pywin32>=308; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -33,7 +34,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-testdata_tool = ["*.ps1"]
+testdata_tool = ["*.ps1", "bridge/*.bas", "bridge/*.xlsm", "bridge/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

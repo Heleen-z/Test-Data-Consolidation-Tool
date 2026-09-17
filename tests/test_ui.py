@@ -78,3 +78,58 @@ def test_usage_failure_boundaries(tmp_path, monkeypatch, failure):
         with Outbox(queue_path()).connect() as db:
             payload = __import__("json").loads(db.execute("SELECT payload FROM events").fetchone()[0])
         assert payload["Title"] == "FAILED" and payload["RowCount"] == 0
+
+
+@pytest.mark.parametrize("mode,count,visible,disabled", [
+    ("online", 0, False, False), ("online", 5, False, False),
+    ("online", 6, True, False), ("cache_only", 6, True, True), ("off", 6, True, True),
+])
+def test_manual_sync_threshold_without_precheck(tmp_path, monkeypatch, mode, count, visible, disabled):
+    from uuid import uuid4
+    from testdata_tool.usage_logging import UsageService, Settings
+    service = UsageService(tmp_path / "q.db", Settings(mode))
+    for _ in range(count):
+        service.outbox.enqueue({"EventId": str(uuid4()), "Title": "SUCCESS"})
+    monkeypatch.setattr("testdata_tool.usage_logging.get_service", lambda _: service)
+    root = Path(__file__).resolve().parents[1]
+    app = AppTest.from_file(root / "src/testdata_tool/ui.py", default_timeout=60).run()
+    buttons = [b for b in app.button if b.label == "手动补传日志"]
+    assert bool(buttons) == visible and not app.exception
+    if visible:
+        assert buttons[0].disabled == disabled
+
+
+def test_manual_sync_below_merge_and_keeps_result_after_threshold(tmp_path, monkeypatch):
+    from uuid import uuid4
+    from testdata_tool.usage_logging import UsageService, Settings
+    service = UsageService(tmp_path / "q.db", Settings())
+    for _ in range(6):
+        service.outbox.enqueue({"EventId": str(uuid4()), "Title": "SUCCESS"})
+    monkeypatch.setattr("testdata_tool.usage_logging.get_service", lambda _: service)
+    root = Path(__file__).resolve().parents[1]
+    app = AppTest.from_file(root / "src/testdata_tool/ui.py", default_timeout=60).run()
+    app.text_input[0].set_value(str(root / "tests/fixtures/raw"))
+    app.text_input[1].set_value(str(tmp_path / "output"))
+    app.text_input[2].set_value(str(root / "Raw data standard Title"))
+    next(b for b in app.button if b.label == "开始 Pre-check").click().run(timeout=60)
+    labels = [b.label for b in app.button]
+    assert labels.index("手动补传日志") == labels.index("开始合并") + 1
+    calls = []
+    def request():
+        calls.append(True)
+        service.running = True
+        service._progress.update(active=True)
+        return True
+    monkeypatch.setattr(service, "request_manual_sync", request)
+    app.run(timeout=60)  # Register the callback before the simulated click.
+    next(b for b in app.button if b.label == "手动补传日志").click().run(timeout=60)
+    assert calls == [True] and not app.exception
+    assert next(b for b in app.button if b.label == "正在补传…").disabled
+    assert service.outbox.status()[0] == 6
+    with service.outbox.connect() as db:
+        db.execute("UPDATE events SET sent=1")
+    service.running = False
+    service._progress.update(active=False, completed=True, sent=6)
+    app.run(timeout=60)
+    assert not any(b.label in {"手动补传日志", "正在补传…"} for b in app.button)
+    assert any("本次已补传 6 条，剩余 0 条" in c.value for c in app.caption)

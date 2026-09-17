@@ -15,6 +15,7 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 from uuid import UUID, uuid4
+from .excel_bridge import DEFAULT_SEED_URL, ExcelBridge, valid_seed_url
 
 DEFAULT_SITE = "https://faurecia.sharepoint.com/sites/AIPortal"
 DEFAULT_LIST = "ToolUseLogs"
@@ -35,6 +36,8 @@ class Settings:
     site_url: str = DEFAULT_SITE
     list_name: str = DEFAULT_LIST
     tool_name: str = DEFAULT_TOOL_NAME
+    excel_bridge_enabled: bool = True
+    seed_url: str = DEFAULT_SEED_URL
 
     @classmethod
     def from_mapping(cls, values):
@@ -48,6 +51,8 @@ class Settings:
                 "site_url": values.get("sharepoint_site_url", DEFAULT_SITE),
                 "list_name": values.get("list_name", DEFAULT_LIST),
                 "tool_name": values.get("tool_name", DEFAULT_TOOL_NAME),
+                "excel_bridge_enabled": values.get("excel_bridge_enabled", True),
+                "seed_url": values.get("seed_url", DEFAULT_SEED_URL),
             }
         # Earlier releases pointed at shared or eBOM lists. Keep their other
         # settings, but never send this tool's records back to an old list.
@@ -63,6 +68,10 @@ class Settings:
             raise ValueError("logging.list_name 不能为空")
         if not result.tool_name.strip():
             raise ValueError("logging.tool_name 不能为空")
+        if not isinstance(result.excel_bridge_enabled, bool):
+            raise ValueError("logging.excel_bridge_enabled 必须是布尔值")
+        if not valid_seed_url(result.seed_url, result.site_url):
+            raise ValueError("logging.seed_url 必须是同一 SharePoint 主机上的 HTTPS Excel 文件地址")
         return result
 
 
@@ -149,7 +158,10 @@ def create_failure_event(event_id, precheck, selected_source_ids, duration, erro
 def sharepoint_payload(event):
     """Return exactly the columns provisioned in ToolUseLogs for an event."""
     defaults = {"ProjectCode": "", "ErrorMessage": "", "OutputFormat": "XLSX"}
-    return {field: event.get(field, defaults.get(field, "")) for field in SHAREPOINT_FIELDS}
+    payload = {field: event.get(field, defaults.get(field, "")) for field in SHAREPOINT_FIELDS}
+    if payload["Title"] == "SUCCESS":
+        payload["ErrorMessage"] = ""
+    return payload
 
 
 class Outbox:
@@ -170,12 +182,17 @@ class Outbox:
             db.execute("INSERT OR IGNORE INTO events(id,payload) VALUES (?,?)",
                        (event["EventId"], json.dumps(event, ensure_ascii=False, allow_nan=False)))
 
-    def claim(self, excluded):
+    def pending_ids(self):
+        with self.connect() as db:
+            return {row[0] for row in db.execute("SELECT id FROM events WHERE sent=0")}
+
+    def claim(self, excluded, allowed=None):
         now, token = time.time(), str(uuid4())
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             rows = db.execute("SELECT id,payload FROM events WHERE sent=0 AND lease_until<=? AND next_try<=? ORDER BY rowid", (now, now))
-            row = next((row for row in rows if row[0] not in excluded), None)
+            row = next((row for row in rows if row[0] not in excluded
+                        and (allowed is None or row[0] in allowed)), None)
             if row is None:
                 return None
             db.execute("UPDATE events SET lease=?,lease_until=? WHERE id=?", (token, now + LEASE_SECONDS, row[0]))
@@ -194,9 +211,10 @@ class Outbox:
 
 
 class UploadError(Exception):
-    def __init__(self, message, retryable=False, retry_after=2):
+    def __init__(self, message, retryable=False, retry_after=2, http_status=None, operation="", bridge_fatal=False):
         super().__init__(message)
         self.retryable, self.retry_after = retryable, retry_after
+        self.http_status, self.operation, self.bridge_fatal = http_status, operation, bridge_fatal
 
 
 def powershell_request(method, url, headers, body=None):
@@ -248,6 +266,7 @@ class SharePointClient:
                 f"AI Portal：{operation}返回 HTTP {status}",
                 status in {0, 408, 429} or status >= 500,
                 delay,
+                http_status=status, operation=operation,
             )
         try:
             data = json.loads(response["body"])
@@ -270,21 +289,63 @@ class SharePointClient:
             {"__metadata": {"type": entity}, **sharepoint_payload(event)}, digest,
             operation="新增使用记录",
         )
-        if not saved.get("Id"):
+        if not isinstance(saved, dict) or type(saved.get("Id")) is not int or saved["Id"] <= 0:
             raise UploadError("提交后未收到列表项标识", retryable=True)
 
 
 class UsageService:
-    def __init__(self, path, settings, client_factory=SharePointClient):
+    def __init__(self, path, settings, client_factory=SharePointClient, bridge_factory=ExcelBridge):
         self.outbox = Outbox(path)
         self.settings, self.client_factory = settings, client_factory
         self.lock = threading.Lock()
         self.running = False
         self.requested = False
+        self.sync_lock = threading.Lock()
+        self.bridge_factory = bridge_factory
+        self._bridge = None
+        self._bridge_settings = None
+        self._manual_ids = None
+        self._progress = {"active": False, "completed": False, "sent": 0, "failed": 0, "error": ""}
 
     def configure(self, settings):
         with self.lock:
+            changed = self.settings != settings
             self.settings = settings
+        if changed:
+            # Dispose on the worker, not the UI/COM caller.
+            with self.lock:
+                if self._bridge is not None:
+                    self.requested = True
+                    if not self.running:
+                        self.running = True
+                        threading.Thread(target=self._run, name="usage-upload", daemon=True).start()
+
+    def snapshot(self):
+        pending, error = self.outbox.status()
+        with self.lock:
+            return {**self._progress, "pending": pending, "mode": self.settings.mode,
+                    "running": self.running or self._progress["active"], "queue_error": error}
+
+    def request_manual_sync(self):
+        with self.lock:
+            if self.settings.mode != "online" or self.running or self._progress["active"]:
+                return False
+            ids = self.outbox.pending_ids()
+            if len(ids) <= 5:
+                return False
+            self._manual_ids = ids
+            self.requested = self.running = True
+            threading.Thread(target=self._run, name="usage-upload", daemon=True).start()
+            return True
+
+    def _close_bridge(self):
+        bridge, self._bridge = self._bridge, None
+        self._bridge_settings = None
+        if bridge is not None:
+            try:
+                bridge.close()
+            except Exception:
+                pass
 
     def enqueue(self, event):
         if self.settings.mode != "off":
@@ -300,34 +361,94 @@ class UsageService:
                 self.running = True
                 threading.Thread(target=self._run, name="usage-upload", daemon=True).start()
 
-    def sync_once(self):
+    def sync_once(self, batch_ids=None):
+        if not self.sync_lock.acquire(blocking=False):
+            return
+        try:
+            self._sync_batch(batch_ids)
+        finally:
+            self.sync_lock.release()
+
+    def _sync_batch(self, batch_ids):
+        with self.lock:
+            self._progress = {"active": True, "completed": False, "sent": 0, "failed": 0, "error": ""}
+        try:
+            self._send_batch(batch_ids)
+        finally:
+            with self.lock:
+                self._progress.update(active=False, completed=True)
+
+    def _send_batch(self, batch_ids):
         visited = set()
-        while self.settings.mode == "online":
-            claimed = self.outbox.claim(visited)
+        settings = self.settings
+        batch_ids = self.outbox.pending_ids() if batch_ids is None else batch_ids
+        if self._bridge_settings != self.settings:
+            self._close_bridge()
+        use_bridge = False
+        while self.settings.mode == "online" and self.settings == settings:
+            claimed = self.outbox.claim(visited, allowed=batch_ids)
             if claimed is None:
                 break
             event_id, event, token = claimed
             visited.add(event_id)
-            settings = self.settings
             success, error, delay = False, "", 0
+            stop_batch = False
             try:
                 for attempt in range(3):
                     if self.settings != settings:
                         break
                     try:
-                        self.client_factory(settings).send(event)
+                        if use_bridge:
+                            if self._bridge is None:
+                                self._bridge = self.bridge_factory(settings)
+                                self._bridge_settings = settings
+                            client = SharePointClient(settings, request=self._bridge.request)
+                        else:
+                            client = self.client_factory(settings)
+                        if isinstance(client, SharePointClient):
+                            request = client.request
+                            def guarded_request(*args, **kwargs):
+                                if self.settings != settings:
+                                    raise UploadError("日志配置已变更，等待下次补传")
+                                return request(*args, **kwargs)
+                            client.request = guarded_request
+                        client.send(event)
                         success = True
                         break
                     except UploadError as exc:
                         error, delay = str(exc), max(2, exc.retry_after)
+                        if (exc.http_status == 403 and not use_bridge and settings.excel_bridge_enabled
+                                and self.bridge_factory is not None and attempt < 2):
+                            use_bridge = True
+                            continue
+                        if use_bridge and (exc.bridge_fatal or exc.http_status in {401, 403}):
+                            stop_batch = True
+                            self._close_bridge()
+                            break
                         if not exc.retryable or attempt == 2 or delay > 2:
                             break
                         time.sleep(delay)
                 # A failed entry waits for a later wake, not a tight retry loop.
             except Exception:
                 error, delay = "使用记录同步异常，等待下次重试", 2
+                if use_bridge:
+                    stop_batch = True
+                    self._close_bridge()
             finally:
-                self.outbox.finish(event_id, token, success, error, delay if not success else 0)
+                self.outbox.finish(event_id, token, success, "" if success else error, delay if not success else 0)
+                with self.lock:
+                    self._progress["sent" if success else "failed"] += 1
+                    if not success:
+                        self._progress["error"] = error
+            if stop_batch:
+                break
+        if use_bridge and self._bridge and self.settings == self._bridge_settings:
+            try:
+                self._bridge.discover()
+            except Exception:
+                self._close_bridge()
+        if self._bridge_settings != self.settings or self.settings.mode != "online":
+            self._close_bridge()
 
     def _run(self):
         try:
@@ -337,10 +458,13 @@ class UsageService:
                         self.running = False
                         return
                     self.requested = False
-                self.sync_once()
+                    batch_ids, self._manual_ids = self._manual_ids, None
+                self.sync_once(batch_ids)
         except Exception:
+            self._close_bridge()
             with self.lock:
                 self.running = False
+                self._progress.update(active=False, completed=True, error="使用记录同步异常，日志已保留")
 
 
 _services = {}

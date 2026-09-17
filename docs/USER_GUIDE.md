@@ -44,7 +44,7 @@ Pre-check 结果表会将长文件名、缺失字段和检查信息自动换行�
 
 每次实际点击“开始合并”后，工具会保存一条使用记录：生成有效结果时为 SUCCESS；整体合并或导出失败时为 FAILED。一个批次只记一次，项目名称自动取输入目录名。启动、Pre-check、查看及下载不会新增记录。
 
-默认“仅本地记录”，网站列表建立后可通过 EXE 旁的 `local-config.yaml` 切换为 `online`，后台上传到 AI Portal。页面下方显示同步状态；网络不通时记录留在本地，后续会话或转换时补传。建表字段和接入步骤见 [AI Portal 使用记录说明](AI_PORTAL_USAGE_LOGGING.md)。
+默认 online，后台上传到 AI Portal 的 ToolUseLogs。出现 403 时会尝试通过隐藏 Excel 和已登录的 Office 公司账号完成上传；网络或权限有问题时记录保留在本地。积压超过 5 条时，“开始合并”下方显示“手动补传日志”；未做 Pre-check 时也可从使用记录区域补传。点击后显示成功数量和剩余量，不会执行合并。cache_only/off 模式下按钮禁用。配置和接入步骤见 [AI Portal 使用记录说明](AI_PORTAL_USAGE_LOGGING.md)。
 
 ## 6. 故障处理
 

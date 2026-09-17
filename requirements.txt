@@ -5,4 +5,4 @@ pyarrow>=17,<25
 PyYAML>=6,<7
 streamlit>=1.41,<2
 xlsxwriter>=3.2,<4
-
+pywin32>=308; sys_platform == 'win32'
