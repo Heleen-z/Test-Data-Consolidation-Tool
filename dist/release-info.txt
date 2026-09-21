@@ -1,0 +1,6 @@
+Testing Data Consolidation Tool release build
+Built at: 2026-09-21 10:41:26
+Git commit: f395273
+EXE: C:\Users\HBZuo\Desktop\forvia\Test-Data-Consolidation-Tool\dist\Testing Data Consolidation Tool.exe
+Size MB: 109.74
+SHA256: C576832BC2EC7D593C3BE46D55DF999EDF851877EF2F1355E798DBB642850B73

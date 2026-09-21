@@ -1,0 +1,542 @@
+# Portable release configuration: all editable tool settings in one file.
+# 默认路径与模板位置。
+defaults:
+  # 默认输入目录。
+  input_folder: ''
+  # 默认输出目录。
+  output_folder: ''
+  # 模板目录；相对 EXE 所在目录。
+  template_folder: template
+  # 默认模板库目录。
+  default_template_library: template
+# 本地 EXE 的版本信息；公共盘同一路径的 config.yaml 以此段提供最新版本。
+release:
+  # 此发布包的版本号。
+  latest_version: 1.1.1
+  # 仍允许运行的最低版本号。
+  minimum_supported_version: 1.1.0
+  # 此版本的简短说明。
+  release_note: 便携式 config/template 发布结构与 ToolUseLogs 日志上传。
+# 每次启动时从公共盘读取 config.yaml 中的 release 段并比较版本。
+version_check:
+  # 是否在每次启动时检查新版。
+  enabled: true
+  # 公共盘上当前 config.yaml 的完整 UNC 路径。
+  config_file: '\\10.162.2.55\shares\Engineering -1890\TC-AFO\DT&AI\Release\Test Data Consolidation Tool\config\config.yaml'
+  # 读取公共盘版本信息的最长等待秒数。
+  timeout_seconds: 3
+  # “打开新版程序位置”按钮打开的公共盘目录。
+  download_folder: '\\10.162.2.55\shares\Engineering -1890\TC-AFO\DT&AI\Release\Test Data Consolidation Tool'
+# SharePoint 使用日志设置。
+logging:
+  # 日志模式：online、cache_only 或 off。
+  mode: online
+  # SharePoint 网站根地址。
+  sharepoint_site_url: https://faurecia.sharepoint.com/sites/AIPortal
+  # 接收日志的 SharePoint 列表。
+  list_name: ToolUseLogs
+  # 写入 Toolname 列的工具名称。
+  tool_name: Testing Data Consolidation Tool
+  # 403 时是否启用 Excel 登录桥接。
+  excel_bridge_enabled: true
+  # Excel 桥接只读打开的种子工作簿地址。
+  seed_url: https://faurecia.sharepoint.com/sites/ES-Asia_RandD2/Released Documents/CHD-F-DSE-1018
+    BOM Conversion Tool.xlsm
+# 可选中央配置设置。
+central_management:
+  # 中央配置根目录；留空表示不使用。
+  central_root: ''
+  # 读取中央配置的超时秒数。
+  startup_timeout_seconds: 5
+# 支持联系信息。
+contact:
+  # 支持负责人。
+  owner: Data Tool Support
+  # 支持邮箱。
+  email: jing.pei@Forvia.com
+  # 支持电话。
+  phone: +86-1522-173-4487
+  # 故障提示文字。
+  note: 如程序报错，请截图并附上 Processing Log.txt 联系支持人员。
+# 界面显示设置。
+ui:
+  # 页面标题。
+  brand_title: Testing Raw Data Consolidation
+  # 主强调色。
+  accent_color: '#0A5E8E'
+  # 模板高亮色。
+  highlight_color: '#E7F2F8'
+  # 表格每页显示行数。
+  page_size: 200
+# 应用空闲退出设置。
+lifecycle:
+  # 是否在空闲时自动退出。
+  auto_shutdown_on_idle: true
+  # 空闲退出等待秒数。
+  idle_shutdown_seconds: 30
+  # 空闲状态检查间隔秒数。
+  idle_shutdown_poll_seconds: 2
+  # 会话心跳间隔秒数。
+  heartbeat_seconds: 3
+  # 启动后的空闲监控宽限秒数。
+  idle_shutdown_startup_grace_seconds: 120
+  # 启用空闲退出所需的最少心跳数。
+  idle_shutdown_min_heartbeats: 3
+# 源代码运行时的模板候选目录。
+template_folder_candidates:
+- Raw data standard Title
+# 文件扫描限制。
+scan:
+  # 单文件最大大小 MB。
+  max_file_mb: 2048
+  # 文件哈希读取块大小 KB。
+  hash_chunk_kb: 1024
+  # 重复文件检测读取的文件头大小 MB。
+  duplicate_hash_head_mb: 4
+# 合并处理设置。
+merge:
+  # 分块处理的行数。
+  chunk_rows: 200000
+  # 是否保留源文件行号。
+  keep_source_row: true
+# 导出文件设置。
+export:
+  # 合并结果文件名。
+  merged_name: Merged Dataset.xlsx
+  # 异常报告文件名。
+  anomaly_name: Anomaly Report.xlsx
+  # 验证报告文件名。
+  validation_name: Validation Report.xlsx
+  # 处理日志文件名。
+  log_name: Processing Log.txt
+  # 单个 Excel 工作表最大数据行数。
+  max_excel_rows: 1000000
+  # 导出进度估算系数。
+  seconds_per_cell: 5.0e-06
+  # 导出进度更新行数。
+  progress_chunk_rows: 20000
+  # 图表工作表名称前缀。
+  chart_sheet_prefix: Trend_
+  # 可视 Excel 数据行上限。
+  visible_excel_rows: 1048575
+# 模板格式识别设置。
+templates:
+  # 识别为有效列的填充色。
+  selected_fill_rgb:
+  - FFFFFF00
+  - FF00B050
+  # 扫描模板表头的最大行数。
+  max_header_scan_rows: 20
+# 字段名称匹配设置。
+matching:
+  # 字段别名映射。
+  aliases: {}
+# 温度通道识别规则。
+temperature:
+  # 名称包含这些文字时视为温度。
+  name_contains:
+  - temp
+  - temperature
+  - tck
+  - ts
+  - thermocouple
+  - egt
+  - exhaust
+  - 温度
+  # 名称完全匹配这些文字时视为温度。
+  name_equals:
+  - ts
+  # 名称以前缀匹配时视为温度。
+  name_prefixes:
+  - t burner
+  - t gas
+  - tc
+  - egt
+  # 数值列名称前缀。
+  numeric_prefixes:
+  - t
+  - ts
+  - tck
+  - tc
+  - egt
+  # 支持的温度单位。
+  units:
+  - c
+  - degc
+  - celsius
+  - f
+  - degf
+  - k
+  - kelvin
+  # 按前缀分组所需的最少列数。
+  group_prefix_min_columns: 5
+# 测试类型识别与解析规则。
+test_types:
+  # 可调整配置项。
+  FAKT:
+    # 文件路径识别关键词。
+    path_keywords:
+    - fakt
+    - lti-498
+    # 允许的文件扩展名。
+    extensions:
+    - .txt
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: first_line_contains
+      # 特征检查的目标值。
+      value: Timestamp [ms];Runtime
+    # 测试类型所属分组。
+    group: Burner
+    # 时间轴类型。
+    time_basis: relative_ms
+    # 使用的解析器标识。
+    parser: delimited
+    # 候选横轴字段。
+    axis_candidates:
+    - Runtime [ms]
+    - Timestamp [ms]
+    - runtime
+    - timestamp
+    # 输出使用的横轴字段。
+    axis_output:
+    - Runtime [ms]
+  # 可调整配置项。
+  GANTER:
+    # 文件路径识别关键词。
+    path_keywords:
+    - ganter
+    # 允许的文件扩展名。
+    extensions:
+    - .csv
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: first_line_contains
+      # 特征检查的目标值。
+      value: TCK01
+    # 测试类型所属分组。
+    group: Burner
+    # 时间轴类型。
+    time_basis: absolute
+    # 使用的解析器标识。
+    parser: delimited
+    # 候选横轴字段。
+    axis_candidates:
+    - date
+    - time
+    - datetime
+    - timestamp
+    # 输出使用的横轴字段。
+    axis_output:
+    - Date
+    - Time
+  # 可调整配置项。
+  SEOUL:
+    # 文件路径识别关键词。
+    path_keywords:
+    - seoul
+    # 允许的文件扩展名。
+    extensions:
+    - .csv
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: line_contains
+      # 要检查的文本行号。
+      line: 1
+      # 特征检查的目标值。
+      value: T Burner
+    # 测试类型所属分组。
+    group: Burner
+    # 时间轴类型。
+    time_basis: absolute
+    # 使用的解析器标识。
+    parser: delimited
+    # 候选横轴字段。
+    axis_candidates:
+    - date
+    - time
+    - datetime
+    - timestamp
+    # 输出使用的横轴字段。
+    axis_output:
+    - Date
+    - Time
+  # 可调整配置项。
+  T09:
+    # 文件路径识别关键词。
+    path_keywords:
+    - t09
+    - diesel burner
+    - dfl
+    # 允许的文件扩展名。
+    extensions:
+    - .xlsx
+    - .tdms
+    - .tdms_index
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: sibling_ext
+      # 特征检查的目标值。
+      value: .tdms
+    - kind: magic
+      # 特征检查的目标值。
+      value: TDMSm
+    # 测试类型所属分组。
+    group: Burner
+    # 时间轴类型。
+    time_basis: cycles
+    # 使用的解析器标识。
+    parser: tabular
+    # 候选横轴字段。
+    axis_candidates:
+    - cycles
+    - cycle
+    - cycle number
+    # 输出使用的横轴字段。
+    axis_output:
+    - Cycles
+  # 可调整配置项。
+  T12:
+    # 文件路径识别关键词。
+    path_keywords:
+    - t12
+    # 允许的文件扩展名。
+    extensions:
+    - .a01
+    - .a02
+    - .a03
+    - .a04
+    - .a05
+    - .a06
+    - .a07
+    - .a08
+    - .a09
+    - .files
+    - .mlog
+    - .xpar
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: first_line_prefix
+      # 特征检查的目标值。
+      value: BENCH4
+    - kind: sibling_ext
+      # 特征检查的目标值。
+      value: .files
+    # 测试类型所属分组。
+    group: Engine bench
+    # 时间轴类型。
+    time_basis: absolute
+    # 使用的解析器标识。
+    parser: proprietary_t12
+    # 候选横轴字段。
+    axis_candidates:
+    - date
+    - time
+    - datetime
+    - timestamp
+    # 输出使用的横轴字段。
+    axis_output:
+    - Date
+    - Time
+  # 可调整配置项。
+  T13:
+    # 文件路径识别关键词。
+    path_keywords:
+    - t13
+    # 允许的文件扩展名。
+    extensions:
+    - .txt
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: first_line_prefix
+      # 特征检查的目标值。
+      value: MNTPFILE
+    # 测试类型所属分组。
+    group: Engine bench
+    # 时间轴类型。
+    time_basis: absolute
+    # 使用的解析器标识。
+    parser: delimited
+    # 候选横轴字段。
+    axis_candidates:
+    - date
+    - time
+    - datetime
+    - timestamp
+    # 输出使用的横轴字段。
+    axis_output:
+    - Date
+    - Time
+  # 可调整配置项。
+  MP_SHAKER:
+    # 文件路径识别关键词。
+    path_keywords:
+    - m+p
+    - shake
+    - shaker
+    - hvt
+    # 允许的文件扩展名。
+    extensions:
+    - .xlsx
+    - .csv
+    - .tsr
+    - .rsr
+    - .sot
+    - .bin
+    # 文件内容或结构特征。
+    fingerprints:
+    - kind: sibling_ext
+      # 特征检查的目标值。
+      value: .tsr
+    - kind: magic
+      # 特征检查的目标值。
+      value: 005+
+    # 测试类型所属分组。
+    group: HVT
+    # 时间轴类型。
+    time_basis: relative_s
+    # 使用的解析器标识。
+    parser: tabular
+    # 候选横轴字段。
+    axis_candidates:
+    - X-Data [s]
+    - x-data
+    - time
+    - frequency
+    # 输出使用的横轴字段。
+    axis_output:
+    - X-Data [s]
+  # 可调整配置项。
+  OTHERS:
+    # 文件路径识别关键词。
+    path_keywords: []
+    # 允许的文件扩展名。
+    extensions: []
+    # 文件内容或结构特征。
+    fingerprints: []
+    # 测试类型所属分组。
+    group: Others
+    # 时间轴类型。
+    time_basis: unknown
+    # 使用的解析器标识。
+    parser: unsupported
+    # 候选横轴字段。
+    axis_candidates: []
+    # 输出使用的横轴字段。
+    axis_output: []
+# 模板文件名匹配关键词。
+template_keywords:
+  # 可调整配置项。
+  FAKT:
+  - fakt
+  # 可调整配置项。
+  GANTER:
+  - ganter
+  # 可调整配置项。
+  SEOUL:
+  - seoul
+  # 可调整配置项。
+  T09:
+  - t09
+  # 可调整配置项。
+  T12:
+  - t12
+  # 可调整配置项。
+  T13:
+  - t13
+  # 可调整配置项。
+  MP_SHAKER:
+  - m+p
+  - shaker
+# 输入中应排除的模板文件名模式。
+template_like_patterns:
+- 表头
+- template
+- header
+# 时间字段名称提示。
+time_field_hints:
+- timestamp
+- date
+- time
+- x-data
+# 循环计数字段名称提示。
+cycle_field_hints:
+- cycle
+- cycles
+# 异常与数据质量规则。
+anomaly_rules:
+  # 数值上下限规则。
+  limits:
+    # 默认上下限。
+    default: {}
+  # 突变检测规则。
+  jump:
+    # 是否启用本规则。
+    enabled: true
+    # 突变阈值的相对倍数。
+    abs_factor: 10.0
+    # 突变阈值的绝对最小值。
+    abs_min: null
+    # 突变检测适用的数值列范围。
+    apply_to: colored_only
+  # 温度通道识别规则。
+  temperature:
+    # 是否启用本规则。
+    enabled: true
+    # 温度局部突变比例阈值。
+    jump_pct: 0.1
+    # 稳定基线使用的起始点数。
+    stable_window_points: 30
+    # 稳定区间比例。
+    stable_band_pct: 0.03
+    # 持续漂移所需的最少点数。
+    drift_min_points: 20
+    # 漂移相对基线的最小比例。
+    drift_delta_pct: 0.05
+    # 漂移段单调变化比例。
+    monotonic_ratio: 0.7
+    # 温度通道名称关键词。
+    name_keywords:
+    - temp
+    - temperature
+    - tck
+    - egt
+    - exhaust
+    # 温度单位关键词。
+    unit_keywords:
+    - C
+    - degC
+    - °C
+    - ℃
+    - K
+  # 数据质量检查规则。
+  data_quality:
+    # 时间间隔异常规则。
+    time_gap:
+      # 是否启用本规则。
+      enabled: true
+      # 异常间隔相对倍数。
+      gap_factor: 5.0
+      # 最多报告的时间间隔异常数。
+      max_gaps_reported: 500
+    # 常值段检测规则。
+    constant_value:
+      # 是否启用本规则。
+      enabled: true
+      # 常值段最短持续秒数。
+      min_seconds: 300
+      # 常值段最少点数。
+      min_points: 30
+      # 忽略的常值。
+      ignore_values:
+      - 0
+    # 重复数据检查规则。
+    duplicates:
+      # 是否启用本规则。
+      enabled: true
+    # 缺失值检查规则。
+    missing:
+      # 是否启用本规则。
+      enabled: true
+      # 高亮列缺失值告警比例。
+      colored_nan_warn_ratio: 0.05
