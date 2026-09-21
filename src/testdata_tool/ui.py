@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 from uuid import uuid4
 from pathlib import Path
@@ -30,6 +31,7 @@ from testdata_tool.precheck import run_precheck
 from testdata_tool.query import filter_dataset, load_dataset
 from testdata_tool.normalize import normalize_header
 from testdata_tool.usage_logging import create_failure_event, create_success_event, get_service
+from testdata_tool.version_check import VersionCheckResult, check_remote_version
 
 
 st.set_page_config(
@@ -90,6 +92,31 @@ def _load_configuration():
     except ConfigError as exc:
         st.error(str(exc))
         st.stop()
+
+
+def _remote_version_result(config) -> VersionCheckResult:
+    """Read the public release once per Streamlit browser session."""
+    if not getattr(sys, "frozen", False):
+        return VersionCheckResult("disabled", "开发环境不执行云端版本检查。", __version__)
+    settings = config.app.get("version_check", {})
+    cache_key = (
+        __version__,
+        str(settings.get("enabled", "")) if isinstance(settings, dict) else "",
+        str(settings.get("config_file", "")) if isinstance(settings, dict) else "",
+        str(settings.get("timeout_seconds", "")) if isinstance(settings, dict) else "",
+        str(settings.get("download_folder", "")) if isinstance(settings, dict) else "",
+    )
+    if st.session_state.get("remote_version_cache_key") != cache_key:
+        st.session_state.remote_version_cache_key = cache_key
+        st.session_state.remote_version_result = check_remote_version(config.app, __version__)
+    return st.session_state.remote_version_result
+
+
+def _open_release_folder(folder: str) -> None:
+    try:
+        os.startfile(folder)  # type: ignore[attr-defined]
+    except Exception as exc:
+        st.error(f"无法打开新版程序位置：{exc}")
 
 
 def _status_table(frame: pd.DataFrame) -> pd.DataFrame:
@@ -324,6 +351,36 @@ def main():
         f"程序 {__version__} · 配置 {config.config_version} · 模板 {config.template_version}"
         f" · 配置来源 {config.config_source}"
     )
+    remote_version = _remote_version_result(config)
+    if st.button("重新检查版本", key="recheck_remote_version"):
+        st.session_state.remote_version_result = check_remote_version(config.app, __version__)
+        remote_version = st.session_state.remote_version_result
+    if remote_version.state == "current":
+        st.success(remote_version.message)
+    elif remote_version.state == "ahead":
+        st.info(remote_version.message)
+    elif remote_version.update_available:
+        st.warning(
+            f"{remote_version.message} 当前程序版本 {__version__}，"
+            f"云端最新版本 {remote_version.latest_version}。"
+        )
+    elif remote_version.update_required:
+        st.error(
+            f"{remote_version.message} 当前程序版本 {__version__}，"
+            f"云端最新版本 {remote_version.latest_version}，"
+            f"最低支持版本 {remote_version.minimum_supported_version}。"
+        )
+    elif remote_version.state == "failed":
+        st.warning(remote_version.message)
+    if remote_version.release_note and remote_version.state in {"update_available", "update_required"}:
+        st.caption(remote_version.release_note)
+    if remote_version.download_folder and remote_version.state in {"update_available", "update_required", "failed"}:
+        st.button(
+            "打开新版程序位置",
+            key="open_remote_release",
+            on_click=_open_release_folder,
+            args=(remote_version.download_folder,),
+        )
     for warning in config.warnings:
         st.warning(warning)
     if config.template_updated:
@@ -353,7 +410,7 @@ def main():
                 os.startfile(str(Path(config.app_download_path).parent))  # type: ignore[attr-defined]
             except Exception as exc:
                 st.error(f"无法打开公共盘位置：{exc}")
-    if update_required:
+    if update_required or remote_version.update_required:
         st.stop()
     with st.sidebar:
         st.markdown("### 使用顺序")

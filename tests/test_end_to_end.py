@@ -35,7 +35,7 @@ def test_precheck_and_multi_type_export(sample_workspace):
         for row in workbook["Summary"].iter_rows(min_row=2, max_col=2)
         if row[0].value
     }
-    assert summary["程序版本"] == "1.1.0"
+    assert summary["程序版本"] == "1.1.1"
     assert summary["配置版本"] == "built-in"
     assert summary["模板版本"] == "built-in"
     sheet = workbook["FAKT"]

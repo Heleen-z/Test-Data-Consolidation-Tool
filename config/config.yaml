@@ -9,6 +9,24 @@ defaults:
   template_folder: template
   # 默认模板库目录。
   default_template_library: template
+# 本地 EXE 的版本信息；公共盘同一路径的 config.yaml 以此段提供最新版本。
+release:
+  # 此发布包的版本号。
+  latest_version: 1.1.1
+  # 仍允许运行的最低版本号。
+  minimum_supported_version: 1.1.0
+  # 此版本的简短说明。
+  release_note: 便携式 config/template 发布结构与 ToolUseLogs 日志上传。
+# 每次启动时从公共盘读取 config.yaml 中的 release 段并比较版本。
+version_check:
+  # 是否在每次启动时检查新版。
+  enabled: true
+  # 公共盘上当前 config.yaml 的完整 UNC 路径。
+  config_file: '\\10.162.2.55\shares\Engineering -1890\TC-AFO\DT&AI\Release\Test Data Consolidation Tool\config\config.yaml'
+  # 读取公共盘版本信息的最长等待秒数。
+  timeout_seconds: 3
+  # “打开新版程序位置”按钮打开的公共盘目录。
+  download_folder: '\\10.162.2.55\shares\Engineering -1890\TC-AFO\DT&AI\Release\Test Data Consolidation Tool'
 # SharePoint 使用日志设置。
 logging:
   # 日志模式：online、cache_only 或 off。
